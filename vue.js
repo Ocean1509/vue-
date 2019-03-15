@@ -239,6 +239,7 @@
   /**
    * Mix properties into target object.
    */
+  // 将_from对象合并到to对象，属性相同时，则覆盖to对象的属性
   function extend (to, _from) {
     for (var key in _from) {
       to[key] = _from[key];
@@ -1159,12 +1160,14 @@
    * how to merge a parent option value and a child option
    * value into the final value.
    */
+  // 默认策略
   var strats = config.optionMergeStrategies;
 
   /**
    * Options with restrictions
    */
   {
+    // el选项，只有vue实例上才拥有el选项，其他子组件不应该拥有el选项
     strats.el = strats.propsData = function (parent, child, vm, key) {
       if (!vm) {
         warn(
@@ -1256,8 +1259,8 @@
     childVal,
     vm
   ) {
-    if (!vm) {
-      if (childVal && typeof childVal !== 'function') {
+    if (!vm) {// vm代表是否为Vue创建的实例，否则是子父类的关系
+      if (childVal && typeof childVal !== 'function') { // 必须保证子类的data类型是一个函数而不是一个对象
         warn(
           'The "data" option should be a function ' +
           'that returns a per-instance value in component ' +
@@ -1394,6 +1397,7 @@
   /**
    * Default strategy.
    */
+  // 用户自定义选项策略
   var defaultStrat = function (parentVal, childVal) {
     return childVal === undefined
       ? parentVal
@@ -1403,19 +1407,21 @@
   /**
    * Validate component names
    */
-  function checkComponents (options) {
+  // components规范检查函数
+  function checkComponents(options) {
     for (var key in options.components) {
       validateComponentName(key);
     }
   }
-
-  function validateComponentName (name) {
+  function validateComponentName(name) {
     if (!new RegExp(("^[a-zA-Z][\\-\\.0-9_" + (unicodeRegExp.source) + "]*$")).test(name)) {
+      // 正则判断检测是否为非法的标签
       warn(
         'Invalid component name: "' + name + '". Component names ' +
         'should conform to valid custom element name in html5 specification.'
       );
     }
+    // 不能使用Vue自身自定义的组件名，如slot, component,不能使用html的保留标签，如 h1, svg等
     if (isBuiltInTag(name) || config.isReservedTag(name)) {
       warn(
         'Do not use built-in or reserved HTML elements as component ' +
@@ -1428,19 +1434,22 @@
    * Ensure all props option syntax are normalized into the
    * Object-based format.
    */
+  // props规范校验
   function normalizeProps (options, vm) {
     var props = options.props;
     if (!props) { return }
     var res = {};
     var i, val, name;
+    // props选项数据有两种形式，一种是['a', 'b', 'c'],一种是{ a: { type: 'String', default: 'hahah' }}
     if (Array.isArray(props)) {
       i = props.length;
       while (i--) {
         val = props[i];
         if (typeof val === 'string') {
           name = camelize(val);
-          res[name] = { type: null };
+          res[name] = { type: null }; // 默认将数组形式的props转换为对象形式。
         } else {
+          // 保证是字符串
           warn('props must be strings when using array syntax.');
         }
       }
@@ -1453,6 +1462,7 @@
           : { type: val };
       }
     } else {
+      // 非数组，非对象则判定props选项传递非法
       warn(
         "Invalid value for option \"props\": expected an Array or an Object, " +
         "but got " + (toRawType(props)) + ".",
@@ -1534,7 +1544,7 @@
     normalizeProps(child, vm);
     normalizeInject(child, vm);
     normalizeDirectives(child);
-
+    
     // Apply extends and mixins on the child options,
     // but only if it is a raw options object that isn't
     // the result of another mergeOptions call.
@@ -1564,6 +1574,7 @@
       var strat = strats[key] || defaultStrat;
       options[key] = strat(parent[key], child[key], vm, key);
     }
+    // console.log(options)
     return options
   }
 
@@ -5108,13 +5119,13 @@
 
       var name = extendOptions.name || Super.options.name;
       if (name) {
-        validateComponentName(name);
+        validateComponentName(name); // 校验子类的名称是否符合规范
       }
 
-      var Sub = function VueComponent (options) {
+      var Sub = function VueComponent (options) { // 子类构造器
         this._init(options);
       };
-      Sub.prototype = Object.create(Super.prototype);
+      Sub.prototype = Object.create(Super.prototype); // 子类继承于父类
       Sub.prototype.constructor = Sub;
       Sub.cid = cid++;
       Sub.options = mergeOptions(
