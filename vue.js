@@ -1184,8 +1184,8 @@
    */
   function mergeData (to, from) {
     if (!from) { return to }
+    debugger
     var key, toVal, fromVal;
-
     var keys = hasSymbol
       ? Reflect.ownKeys(from)
       : Object.keys(from);
@@ -1536,7 +1536,6 @@
     {
       checkComponents(child);
     }
-
     if (typeof child === 'function') {
       child = child.options;
     }
@@ -4947,7 +4946,6 @@
         endTag = "vue-perf-end:" + (vm._uid);
         mark(startTag);
       }
-
       // a flag to avoid this being observed
       vm._isVue = true;
       // merge options
