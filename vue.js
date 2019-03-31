@@ -1184,7 +1184,6 @@
    */
   function mergeData (to, from) {
     if (!from) { return to }
-    debugger
     var key, toVal, fromVal;
     var keys = hasSymbol
       ? Reflect.ownKeys(from)
@@ -2093,6 +2092,7 @@
 
     var hasHandler = {
       has: function has (target, key) {
+        debugger
         var has = key in target;
         var isAllowed = allowedGlobals(key) ||
           (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data));
@@ -2116,7 +2116,7 @@
 
     initProxy = function initProxy (vm) {
       if (hasProxy) {
-        // determine which proxy handler to use
+        // 
         var options = vm.$options;
         var handlers = options.render && options.render._withStripped
           ? getHandler

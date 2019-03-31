@@ -9,40 +9,19 @@
 </head>
 
 <body>
-  <div id="app">{{message}}</div>
+  <div id="app">{{message}}{{test}}</div>
   <script src="./vue.js"></script>
   <script>
-    // var app = new Vue({
-    //   el: '#app',
-    //   data: {
-    //     message: '111'
-    //   },
-    //   components: {
-    //     'd1d': {}
-    //   },
-    //   props: ['DS_dd', 'd-wd', 'aD']
-    // })
-    var Parent = Vue.extend({
-      data() {
-        return {
-          a: '111',
-          b: {
-            c: '1111'
-          }
-        }
+  
+    var vm = new Vue({
+      el: '#app',
+      data: {
+        message: 1,
+        // _test: 1
       }
     })
-    var Child = Parent.extend({
-      data() {
-        return {
-          b: {
-            c: '1d',
-            d: '141141'
-          }
-        }
-      }
-    })
-    console.log(Child.options.data())
+    console.log(vm.$options)
+    console.log(vm.$options.render)
   </script>
 </body>
 
