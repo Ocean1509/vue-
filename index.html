@@ -23,26 +23,20 @@
     //   props: ['DS_dd', 'd-wd', 'aD']
     // })
     var Parent = Vue.extend({
-      data() {
-        return {
-          a: '111',
-          b: {
-            c: '1111'
-          }
+      methods: {
+        a() {
+          console.log('a')
         }
       }
     })
     var Child = Parent.extend({
-      data() {
-        return {
-          b: {
-            c: '1d',
-            d: '141141'
-          }
+      methods: {
+        a() {
+          console.log('b')
         }
       }
     })
-    console.log(Child.options.data())
+    // console.log(Child.options.data())
   </script>
 </body>
 

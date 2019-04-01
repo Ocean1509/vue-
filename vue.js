@@ -1289,12 +1289,12 @@
         : Array.isArray(childVal)
           ? childVal
           : [childVal]
-      : parentVal;
+      : parentVal; // 1.如果子类和父类都拥有钩子选项，则将子类选项和父类选项合并, 2如果父类不存在钩子选项，子类存在时，则以数组形式返回子类钩子选项， 3.当子类不存在钩子选项时，则以父类选项返回。
     return res
       ? dedupeHooks(res)
       : res
   }
-
+  // 防止多个组件实例钩子选项不受影响
   function dedupeHooks (hooks) {
     var res = [];
     for (var i = 0; i < hooks.length; i++) {
@@ -1306,7 +1306,7 @@
   }
 
   LIFECYCLE_HOOKS.forEach(function (hook) {
-    strats[hook] = mergeHook;
+    strats[hook] = mergeHook;// 对生命周期钩子选项的合并都执行mergeHook策略
   });
 
   /**
@@ -1316,23 +1316,24 @@
    * a three-way merge between constructor options, instance
    * options and parent options.
    */
+  // 资源选项自定义合并策略
   function mergeAssets (
     parentVal,
     childVal,
     vm,
     key
   ) {
-    var res = Object.create(parentVal || null);
+    var res = Object.create(parentVal || null); // 创建一个空对象，其原型指向父类的资源选项。
     if (childVal) {
-      assertObjectType(key, childVal, vm);
-      return extend(res, childVal)
+      assertObjectType(key, childVal, vm); // components,filters,directives选项必须为对象
+      return extend(res, childVal) // 子类选项赋值给空对象
     } else {
       return res
     }
   }
 
   ASSET_TYPES.forEach(function (type) {
-    strats[type + 's'] = mergeAssets;
+    strats[type + 's'] = mergeAssets; // 定义默认策略
   });
 
   /**
@@ -1341,6 +1342,7 @@
    * Watchers hashes should not overwrite one
    * another, so we merge them as arrays.
    */
+  // watch 选项合并策略
   strats.watch = function (
     parentVal,
     childVal,
@@ -1374,6 +1376,8 @@
   /**
    * Other object hashes.
    */
+
+  // 其他选项合并策略
   strats.props =
   strats.methods =
   strats.inject =
@@ -1383,6 +1387,7 @@
     vm,
     key
   ) {
+    debugger
     if (childVal && "development" !== 'production') {
       assertObjectType(key, childVal, vm);
     }
@@ -1514,7 +1519,7 @@
     }
   }
 
-  function assertObjectType (name, value, vm) {
+  function assertObjectType (name, value, vm) { // 判断是否为对象
     if (!isPlainObject(value)) {
       warn(
         "Invalid value for option \"" + name + "\": expected an Object, " +
