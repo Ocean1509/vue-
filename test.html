@@ -10,120 +10,29 @@
 
 <body>
   <script>
-    // var a = function () {
-    //   console.log(this)
-    // }
+    // function A() {
+    //   this.a = 2;
 
-    // var b =  () => {
-    //   console.log(this)
-    // }
-
-    // var c = {
-    //   a,
-    //   b
-    // }
-
-    // c.a()
-    // c.b()
-
-    // let a;
-    // let barObj = {
-    //   msg: 'bar的this指向'
-    // };
-    // let fooObj = {
-    //   msg: 'foo的this指向'
-    // };
-    // bar.call(barObj); // 将bar的this指向barObj
-    // foo.call(fooObj); // 将foo的this指向fooObj
-    // function foo() {
-    //   a(); // 结果：{ msg: 'bar的this指向' }
-    // }
-
-    // function bar() {
-    //   a = () => {
-    //     console.log(this, 'this指向定义的时候外层第一个普通函数'); // 
-    //   }; // 在bar中定义 this继承于bar函数的this指向
-    // }
-    // var a = {
-    //   b: () => {
+    //   function B() {
     //     console.log(this)
+    //     this.a = 1;
     //   }
+    //   return B();
     // }
-    // var c = {}
-    // a.b()
-    // function foo() {
-    //   setTimeout(function(){
-    //     console.log('id:', this.id);
-    //   }, 100);
-    // }
-
-    // var id = 21;
-
-    // foo.call({
-    //   id: 42
-    // });
-    // function foo () {
-    //   return {
-    //     b: () => {
-    //       console.log(this)
-    //     }
-    //   }
-    // }
-    // foo().b()
-    // var a;
-
-    // function foo() {
-    //   a = {
-    //     b: () => {
-    //       console.log(this)
-    //     }
-    //   }
-    // }
-    // foo()
-    // a.b()
-
-    // function Foo() {
-    //   getName = function () {
-    //     console.log(1);
-    //   }
-    //   return this
-    // }
-    // Foo.getName = function () {
-    //   console.log(2);
-    // }
-    // Foo.prototype.getName = function () {
-    //   console.log(3);
-    // }
-    // var getName = function () {
-    //   console.log(4);
-    // }
-
-    // function getName() {
-    //   console.log(5);
-    // }
-
-    // // 输出值
-    // // Foo.getName(); // 2
-    // // getName(); // 5
-    // // Foo().getName(); // 2
-    // // getName(); // 1
-    // new Foo.getName() // 2
-    // new Foo().getName() // 3
-    // new new Foo().getName() // 3
-
-
-
-    function A() {
-      this.a = 2;
-
-      function B() {
-        console.log(this)
-        this.a = 1;
+    // console.log(A)
+    var arr = [1, 2, 3]
+    let obj = new Proxy(arr, {
+      get: function (target, key, receiver) {
+        console.log("获取数组");
+        return Reflect.get(target, key, receiver);
+      },
+      set: function (target, key, receiver) {
+        console.log('设置数组');
+        return Reflect.set(target, key, receiver);
       }
-      return B();
-    }
-    console.log(A)
-    // console.log(A());
+    })
+
+    obj.push(222)
   </script>
 </body>
 

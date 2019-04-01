@@ -2097,7 +2097,6 @@
 
     var hasHandler = {
       has: function has (target, key) {
-        debugger
         var has = key in target;
         var isAllowed = allowedGlobals(key) ||
           (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data));
@@ -4969,6 +4968,7 @@
       }
       /* istanbul ignore else */
       {
+        // 对vm实例进行一层代理
         initProxy(vm);
       }
       // expose real self
