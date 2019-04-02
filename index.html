@@ -9,19 +9,16 @@
 </head>
 
 <body>
-  <div id="app">{{message}}{{_test}}</div>
+  <div id="app">
+    <component-a></component-a>
+  </div>
   <script src="./vue.js"></script>
   <script>
-  
-    var vm = new Vue({
-      el: '#app',
-      data: {
-        message: 1,
-        _test: 1
-      }
+    Vue.component('component-a', {
+      template: '<div>a</div>'
     })
-    // console.log(vm.$options)
-    // console.log(vm.$options.render)
+    var vm = new Vue({ el: '#app'})
+    console.log(vm)
   </script>
 </body>
 

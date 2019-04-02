@@ -20,19 +20,33 @@
     //   return B();
     // }
     // console.log(A)
-    var arr = [1, 2, 3]
-    let obj = new Proxy(arr, {
-      get: function (target, key, receiver) {
-        console.log("获取数组");
-        return Reflect.get(target, key, receiver);
-      },
-      set: function (target, key, receiver) {
-        console.log('设置数组');
-        return Reflect.set(target, key, receiver);
+    // var arr = [1, 2, 3]
+    // let obj = new Proxy(arr, {
+    //   get: function (target, key, receiver) {
+    //     console.log("获取数组");
+    //     return Reflect.get(target, key, receiver);
+    //   },
+    //   set: function (target, key, receiver) {
+    //     console.log('设置数组');
+    //     return Reflect.set(target, key, receiver);
+    //   }
+    // })
+
+    // obj.push(222)
+    var obj = {
+      a: 1
+    }
+    var nObj = new Proxy(obj, {
+      has(target, key) {
+        console.log(target) // { a: 1 }
+        console.log(key) // a
+        return true
       }
     })
 
-    obj.push(222)
+    with(nObj) {
+      a = 2
+    }
   </script>
 </body>
 

@@ -2096,6 +2096,7 @@
     }
 
     var hasHandler = {
+      // key in obj或者with作用域时，会触发has的钩子
       has: function has (target, key) {
         var has = key in target;
         var isAllowed = allowedGlobals(key) ||
@@ -3897,7 +3898,6 @@
 
   function initLifecycle (vm) {
     var options = vm.$options;
-
     // locate first non-abstract parent
     var parent = options.parent;
     if (parent && !options.abstract) {

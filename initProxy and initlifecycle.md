@@ -87,7 +87,7 @@ obj.push(222)
 ```
 显然proxy可以很容易的监听到数组的变化。
 
-### 2.3 initProxy
+### 2.2 initProxy
 初始化合并选项之后，vue接下来的操作是将为vm实例设置一层代理，代理的目的是为vue在模板渲染时进行一层数据筛选。如果浏览器不支持Proxy，这层代理检验数据则会失效。
 ```
 {
@@ -108,19 +108,8 @@ var initProxy = function initProxy (vm) {
         vm._renderProxy = vm;
     }
 };
-```
-看到这里时，心中会有几点疑惑。
-- 什么时候会触发这层代理进行数据检测？
-- getHandler 和 hasHandler的场景分别是什么？
 
-如何解决这个疑惑，我们接着往下看：
-
-##### 2.3.1 模板渲染
-我们发现，在vue的模板引擎的渲染
-
-// 如何判断浏览器支持原生proxy
-
-```
+如何判断浏览器支持原生proxy
 // 是否支持Symbol 和 Reflect
 var hasSymbol =
     typeof Symbol !== 'undefined' && isNative(Symbol) &&
@@ -130,3 +119,116 @@ function isNative (Ctor) {
     return typeof Ctor === 'function' && /native code/.test(Ctor.toString())
 }
 ``` 
+
+看到这里时，心中会有几点疑惑。
+- 什么时候会触发这层代理进行数据检测？
+- getHandler 和 hasHandler的场景分别是什么？
+
+如何解决这个疑惑，我们接着往下看：
+
+- 1.在组件的更新渲染时会调用vm实例的render方法，具体模板引擎如何工作，我们放到相关专题在分析，我们观察到，vm实例的render方法在调用时会触发这一层的代理。
+```
+Vue.prototype._render = function () {
+    ···
+    // 调用vm._renderProxy
+    vnode = render.call(vm._renderProxy, vm.$createElement);
+}
+```
+也就是说像模板引擎```<div>{{message}}</div>```的渲染显示，会通过Proxy这层代理对数据进行过滤，并对非法数据进行报错提醒。
+
+- 2.handers函数会根据options.render 和 options.render._withStripped执行不同的代理函数getHandler,hasHandler。当使用类似webpack这样的打包工具时，我们会使用vue-loader进行模板编译，这个时候options.render 是存在的，并且_withStripped的属性也会设置为true，关于编译版本和运行版本的区别不在这一章节展开。先大致了解使用场景即可。
+
+
+##### 2.2.1 代理场景
+接着上面的问题，vm实例代理时会根据是否是编译的版本决定使用hasHandler或者getHandler，我们先默认使用的是编译版本，因此我们单独分析hasHandler的处理函数,getHandler的分析类似。
+```
+var hasHandler = {
+    // key in obj或者with作用域时，会触发has的钩子
+    has: function has (target, key) {
+        ···
+    }
+};
+```
+hasHandler函数定义了has的钩子，前面介绍过proxy有多达13个钩子，has是其中一个，它用来拦截propKey in proxy的操作，返回一个布尔值。除了拦截 in 操作符外，has钩子同样可以用来拦截with作用域下的属性。例如
+```
+var obj = {
+    a: 1
+}
+var nObj = new Proxy(obj, {
+    has(target, key) {
+        console.log(target) // { a: 1 }
+        console.log(key) // a
+        return true
+    }
+})
+
+with(nObj) {
+    a = 2
+}
+```
+而在vue的render函数的内部，本质上也是调用了with语句,当调用with语句时，该作用域下变量的访问都会触发has钩子，这也是模板渲染时会触发代理拦截的原因。
+
+```
+var vm = new Vue({
+    el: '#app'     
+})
+console.log(vm.$options.render)
+
+//输出
+ƒ anonymous() {
+    with(this){return _c('div',{attrs:{"id":"app"}},[_v(_s(message)+_s(_test))])}
+}
+```
+再次抛出一个疑问，我们知道[with语句](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/with)是不推荐使用的,一个最主要的原因是性能问题，查找不是变量属性的变量，速度会影响性能问题。
+
+[官方](https://github.com/vuejs/vue/issues/4115)给出的解释是: 为了减少编译器代码大小和复杂度,并且也可以通过vue-loader这类构建工具，使用不含with的版本。
+
+
+##### 2.2.2 代理检测过程
+接着上面的分析，在模板引擎render渲染时，由于with语句的存在，访问变量时会触发has钩子函数，该函数会进行数据的检测，比如模板上的变量是否是实例中所定义，是否包含_, $这类vue内部保留关键字为开头的变量。同时模板上的变量允许出现javascript的保留变量对象，例如Math, Number, parseFloat等。
+```
+var hasHandler = {
+    has: function has (target, key) {
+        var has = key in target;
+        // isAllowed用来判断模板上出现的变量是否合法。
+        var isAllowed = allowedGlobals(key) ||
+            (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data));
+            // _和$开头的变量不允许出现在定义的数据中，因为他是vue内部保留属性的开头。
+        // warnReservedPrefix警告不能以$ _开头的变量
+        // warnNonPresent 警告模板出现的变量在vue实例中未定义
+        if (!has && !isAllowed) {
+            if (key in target.$data) { warnReservedPrefix(target, key); }
+            else { warnNonPresent(target, key); }
+        }
+        return has || !isAllowed
+    }
+};
+
+// 模板中允许出现的非vue实例定义的变量
+var allowedGlobals = makeMap(
+    'Infinity,undefined,NaN,isFinite,isNaN,' +
+    'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
+    'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
+    'require' // for Webpack/Browserify
+);
+```
+
+##### 2.3 initLifecycle
+分析完initProxy方法后，接下来是initLifecycle的过程。简单概括，initLifecycle的目的是将当前实例添加到父实例的$children属性中，并设置自身的$parent属性指向父实例。这为后续子父组件之间的通信提供了桥梁。举一个具体的应用场景：
+```
+<div id="app">
+    <component-a></component-a>
+</div>
+Vue.component('component-a', {
+    template: '<div>a</div>'
+})
+var vm = new Vue({ el: '#app'})
+console.log(vm) // 将实例对象输出
+``` 
+由于vue实例向上没有父实例，所以vm.$parent为undefined，vm的$children属性指向子组件componentA 的实例。
+// 图
+子组件componentA的$parent属性指向它的父级vm实例，它的$children属性指向为空
+// 图
+
+
+源码如下: 
