@@ -11843,6 +11843,7 @@
     el,
     hydrating
   ) {
+    debugger
     el = el && query(el);
 
     /* istanbul ignore if */
