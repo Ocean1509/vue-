@@ -1386,7 +1386,6 @@
     vm,
     key
   ) {
-    debugger
     if (childVal && "development" !== 'production') {
       assertObjectType(key, childVal, vm);
     }
@@ -3898,15 +3897,16 @@
 
   function initLifecycle (vm) {
     var options = vm.$options;
-    // locate first non-abstract parent
+    // 子组件注册时，会把父组件的实例挂载到自身选项的parent上
     var parent = options.parent;
+    // 如果是子组件，并且该组件不是抽象组件时，将该组件的实例添加到父组件的$parent属性上，如果父组件是抽象组件，则一直往上层寻找，直到该父级组件不是抽象组件，并将，将该组件的实例添加到父组件的$parent属性
     if (parent && !options.abstract) {
       while (parent.$options.abstract && parent.$parent) {
         parent = parent.$parent;
       }
       parent.$children.push(vm);
     }
-
+    // 将自身的$parent属性指向父实例。
     vm.$parent = parent;
     vm.$root = parent ? parent.$root : vm;
 
@@ -3916,8 +3916,11 @@
     vm._watcher = null;
     vm._inactive = null;
     vm._directInactive = false;
+    // 该实例是否挂载
     vm._isMounted = false;
+    // 该实例是否被销毁
     vm._isDestroyed = false;
+    // 该实例是否正在被销毁
     vm._isBeingDestroyed = false;
   }
 
