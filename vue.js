@@ -4991,7 +4991,7 @@
         mark(endTag);
         measure(("vue " + (vm._name) + " init"), startTag, endTag);
       }
-
+      // new Vue 实例上拥有el选项，才会进行组件挂载。
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
       }
@@ -11801,10 +11801,12 @@
     template,
     options
   ) {
+    // 把模板解析成抽象的语法树 - AST
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
     }
+    // 根据AST生成不同目标平台需要的代码
     var code = generate(ast, options);
     return {
       ast: ast,
@@ -11840,7 +11842,7 @@
     var el = query(id);
     return el && el.innerHTML
   });
-
+  
   var mount = Vue.prototype.$mount;
   Vue.prototype.$mount = function (
     el,
@@ -11857,6 +11859,7 @@
     }
 
     var options = this.$options;
+    debugger
     // resolve template/el and convert to render function
     if (!options.render) {
       var template = options.template;
@@ -11888,7 +11891,6 @@
         if (config.performance && mark) {
           mark('compile');
         }
-
         var ref = compileToFunctions(template, {
           outputSourceRange: "development" !== 'production',
           shouldDecodeNewlines: shouldDecodeNewlines,

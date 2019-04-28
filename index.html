@@ -10,15 +10,24 @@
 
 <body>
   <div id="app">
-    <component-a></component-a>
   </div>
   <script src="./vue.js"></script>
   <script>
-    Vue.component('component-a', {
-      template: '<div>a</div>'
+    var vm = new Vue({
+      el: '#app',
+      // render(h) {
+      //   return h('div', this.hi)
+      // },
+      data() {
+        return {
+          l: '1'
+        }
+      }
     })
-    var vm = new Vue({ el: '#app'})
-    console.log(vm)
+    // var Vm = Vue.extend({
+    //   template: '<div>33</div>'
+    // })
+    // new Vm().$mount('#app')
   </script>
 </body>
 
