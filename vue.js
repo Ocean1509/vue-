@@ -9018,6 +9018,7 @@
   Vue.prototype.__patch__ = inBrowser ? patch : noop;
 
   // public mount method
+  // 挂载逻辑的真正处理
   Vue.prototype.$mount = function (
     el,
     hydrating
@@ -11848,7 +11849,6 @@
     el,
     hydrating
   ) {
-    debugger
     el = el && query(el);
 
     /* istanbul ignore if */
@@ -11860,7 +11860,6 @@
     }
 
     var options = this.$options;
-    debugger
     // resolve template/el and convert to render function
     if (!options.render) {
       var template = options.template;
