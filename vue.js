@@ -11861,6 +11861,8 @@
 
     var options = this.$options;
     // resolve template/el and convert to render function
+    // 模板编译的条件是没有render渲染函数，同时有template模板，编译的目标就是将template模板转换为render函数
+    debugger
     if (!options.render) {
       var template = options.template;
       if (template) {

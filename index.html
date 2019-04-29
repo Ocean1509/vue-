@@ -10,7 +10,12 @@
 
 <body>
   <div id="app">
+    dd
+    <script type="text/x-template" id="b">
+      <p>Hello hello hello</p>
+    </script>
   </div>
+
   <script src="./vue.js"></script>
   <script>
     var vm = new Vue({
@@ -18,6 +23,7 @@
       // render(h) {
       //   return h('div', this.hi)
       // },
+      template: '#b',
       data() {
         return {
           l: '1'
