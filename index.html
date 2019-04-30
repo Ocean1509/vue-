@@ -17,21 +17,21 @@
   </div> -->
   <div id="app">
     <div>test1</div>
-    <span id="test">
-      <div class="test2">test2</div>
-    </span>
+    <script type="x-template" id="test">
+      <p>test</p>
+  </script>
   </div>
-
   <script src="./vue.js"></script>
   <script>
-    var vm = new Vue({
-      el: '#app',
-      template: document.querySelector('#test')
-    })
-    // var Vm = Vue.extend({
-    //   template: '<div>33</div>'
+    // Vue.component('component-a', {
+    //   template: '<div>a</div>'
     // })
-    // new Vm().$mount('#app')
+    // var vm = new Vue({ el: '#app'})
+    // console.log(vm)
+    new Vue({
+      el: '#app',
+      template: '#test'
+    })
   </script>
 </body>
 

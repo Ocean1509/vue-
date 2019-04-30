@@ -11866,8 +11866,11 @@
     if (!options.render) {
       var template = options.template;
       if (template) {
+        // 针对字符串模板和选择符匹配模板
         if (typeof template === 'string') {
+          // 选择符匹配模板，以'#'为前缀的选择器
           if (template.charAt(0) === '#') {
+            // 获取匹配元素的innerHTML
             template = idToTemplate(template);
             /* istanbul ignore if */
             if (!template) {
@@ -11877,15 +11880,19 @@
               );
             }
           }
+        // 针对dom元素匹配
         } else if (template.nodeType) {
+          // 获取匹配元素的innerHTML
           template = template.innerHTML;
         } else {
+          // 其他类型则判定为非法传入
           {
             warn('invalid template option:' + template, this);
           }
           return this
         }
       } else if (el) {
+        // 如果没有传入template模板，则默认以el元素所属的根节点作为基础模板
         template = getOuterHTML(el);
       }
       if (template) {
