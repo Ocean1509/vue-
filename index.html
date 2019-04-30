@@ -9,26 +9,24 @@
 </head>
 
 <body>
-  <div id="app">
+  <!-- <div id="app">
     dd
     <script type="text/x-template" id="b">
       <p>Hello hello hello</p>
     </script>
+  </div> -->
+  <div id="app">
+    <div>test1</div>
+    <span id="test">
+      <div class="test2">test2</div>
+    </span>
   </div>
 
   <script src="./vue.js"></script>
   <script>
     var vm = new Vue({
       el: '#app',
-      // render(h) {
-      //   return h('div', this.hi)
-      // },
-      template: '#b',
-      data() {
-        return {
-          l: '1'
-        }
-      }
+      template: document.querySelector('#test')
     })
     // var Vm = Vue.extend({
     //   template: '<div>33</div>'
