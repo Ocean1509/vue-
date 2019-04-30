@@ -10,30 +10,19 @@
 
 <body>
   <div id="app">
-    dd
-    <script type="text/x-template" id="b">
-      <p>Hello hello hello</p>
-    </script>
+    <div id="d"><span>dsfijoejiofji</span></div>
   </div>
-
   <script src="./vue.js"></script>
   <script>
-    var vm = new Vue({
-      el: '#app',
-      // render(h) {
-      //   return h('div', this.hi)
-      // },
-      template: '#b',
-      data() {
-        return {
-          l: '1'
-        }
-      }
-    })
-    // var Vm = Vue.extend({
-    //   template: '<div>33</div>'
+    // Vue.component('component-a', {
+    //   template: '<div>a</div>'
     // })
-    // new Vm().$mount('#app')
+    // var vm = new Vue({ el: '#app'})
+    // console.log(vm)
+    new Vue({
+      el: '#app',
+      template: document.querySelector('#d')
+    })
   </script>
 </body>
 
