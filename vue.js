@@ -1386,6 +1386,7 @@
     vm,
     key
   ) {
+    debugger
     if (childVal && "development" !== 'production') {
       assertObjectType(key, childVal, vm);
     }
@@ -3897,16 +3898,15 @@
 
   function initLifecycle (vm) {
     var options = vm.$options;
-    // 子组件注册时，会把父组件的实例挂载到自身选项的parent上
+    // locate first non-abstract parent
     var parent = options.parent;
-    // 如果是子组件，并且该组件不是抽象组件时，将该组件的实例添加到父组件的$parent属性上，如果父组件是抽象组件，则一直往上层寻找，直到该父级组件不是抽象组件，并将，将该组件的实例添加到父组件的$parent属性
     if (parent && !options.abstract) {
       while (parent.$options.abstract && parent.$parent) {
         parent = parent.$parent;
       }
       parent.$children.push(vm);
     }
-    // 将自身的$parent属性指向父实例。
+
     vm.$parent = parent;
     vm.$root = parent ? parent.$root : vm;
 
@@ -3916,11 +3916,8 @@
     vm._watcher = null;
     vm._inactive = null;
     vm._directInactive = false;
-    // 该实例是否挂载
     vm._isMounted = false;
-    // 该实例是否被销毁
     vm._isDestroyed = false;
-    // 该实例是否正在被销毁
     vm._isBeingDestroyed = false;
   }
 
@@ -4991,7 +4988,7 @@
         mark(endTag);
         measure(("vue " + (vm._name) + " init"), startTag, endTag);
       }
-      // new Vue 实例上拥有el选项，才会进行组件挂载。
+
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
       }
@@ -9018,7 +9015,6 @@
   Vue.prototype.__patch__ = inBrowser ? patch : noop;
 
   // public mount method
-  // 挂载逻辑的真正处理
   Vue.prototype.$mount = function (
     el,
     hydrating
@@ -11693,6 +11689,7 @@
       // turn code into functions
       var res = {};
       var fnGenErrors = [];
+      debugger
       res.render = createFunction(compiled.render, fnGenErrors);
       res.staticRenderFns = compiled.staticRenderFns.map(function (code) {
         return createFunction(code, fnGenErrors)
@@ -11725,18 +11722,15 @@
 
   function createCompilerCreator (baseCompile) {
     return function createCompiler (baseOptions) {
-      function compile (
-        template,
-        options
-      ) {
+      // 内部定义compile方法
+      function compile (template, options) {
         var finalOptions = Object.create(baseOptions);
         var errors = [];
         var tips = [];
-
         var warn = function (msg, range, tip) {
           (tip ? tips : errors).push(msg);
         };
-
+        // 选项合并
         if (options) {
           if (options.outputSourceRange) {
             // $flow-disable-line
@@ -11761,6 +11755,7 @@
               (baseOptions.modules || []).concat(options.modules);
           }
           // merge custom directives
+          // 指令
           if (options.directives) {
             finalOptions.directives = extend(
               Object.create(baseOptions.directives || null),
@@ -11776,7 +11771,7 @@
         }
 
         finalOptions.warn = warn;
-
+        // 将剔除空格后的模板以及合并选项后的配置作为参数传递给baseCompile方法
         var compiled = baseCompile(template.trim(), finalOptions);
         {
           detectErrors(compiled.ast, warn);
@@ -11785,7 +11780,7 @@
         compiled.tips = tips;
         return compiled
       }
-
+      debugger
       return {
         compile: compile,
         compileToFunctions: createCompileToFunctionFn(compile)
@@ -11802,12 +11797,10 @@
     template,
     options
   ) {
-    // 把模板解析成抽象的语法树 - AST
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
     }
-    // 根据AST生成不同目标平台需要的代码
     var code = generate(ast, options);
     return {
       ast: ast,
@@ -11843,7 +11836,7 @@
     var el = query(id);
     return el && el.innerHTML
   });
-  
+
   var mount = Vue.prototype.$mount;
   Vue.prototype.$mount = function (
     el,
@@ -11861,16 +11854,11 @@
 
     var options = this.$options;
     // resolve template/el and convert to render function
-    // 模板编译的条件是没有render渲染函数，同时有template模板，编译的目标就是将template模板转换为render函数
-    debugger
     if (!options.render) {
       var template = options.template;
       if (template) {
-        // 针对字符串模板和选择符匹配模板
         if (typeof template === 'string') {
-          // 选择符匹配模板，以'#'为前缀的选择器
           if (template.charAt(0) === '#') {
-            // 获取匹配元素的innerHTML
             template = idToTemplate(template);
             /* istanbul ignore if */
             if (!template) {
@@ -11880,19 +11868,15 @@
               );
             }
           }
-        // 针对dom元素匹配
         } else if (template.nodeType) {
-          // 获取匹配元素的innerHTML
           template = template.innerHTML;
         } else {
-          // 其他类型则判定为非法传入
           {
             warn('invalid template option:' + template, this);
           }
           return this
         }
       } else if (el) {
-        // 如果没有传入template模板，则默认以el元素所属的根节点作为基础模板
         template = getOuterHTML(el);
       }
       if (template) {
@@ -11900,6 +11884,7 @@
         if (config.performance && mark) {
           mark('compile');
         }
+
         var ref = compileToFunctions(template, {
           outputSourceRange: "development" !== 'production',
           shouldDecodeNewlines: shouldDecodeNewlines,
