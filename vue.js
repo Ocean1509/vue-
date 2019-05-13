@@ -3351,18 +3351,20 @@
   // wrapper function for providing a more flexible interface
   // without getting yelled at by flow
   function createElement (
-    context,
-    tag,
-    data,
-    children,
+    context, // vm 实例
+    tag, // vnode标签
+    data, //vnode相关数据
+    children, // 子vnode
     normalizationType,
     alwaysNormalize
   ) {
+    // 对传入参数做处理，可以没有data，如果没有data，则将第三个参数作为第四个参数使用，以此类推
     if (Array.isArray(data) || isPrimitive(data)) {
       normalizationType = children;
       children = data;
       data = undefined;
     }
+    // 根据是alwaysNormalize 区分是内部编译使用的，还是用户手写render使用的
     if (isTrue(alwaysNormalize)) {
       normalizationType = ALWAYS_NORMALIZE;
     }
@@ -3376,7 +3378,6 @@
     children,
     normalizationType
   ) {
-    debugger
     // 数据对象不能放在Vue实例中的data去定义，实例定义的data对象，对象的属性值会加入到相应系统中，也就是会增加__ob__属性。
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
@@ -3384,17 +3385,17 @@
         'Always create fresh vnode data objects in each render!',
         context
       );
-      return createEmptyVNode()
+      return createEmptyVNode() // 返回注释节点
     }
-    // object syntax in v-bind
+    // 针对动态组件 :is 的特殊处理
     if (isDef(data) && isDef(data.is)) {
       tag = data.is;
     }
     if (!tag) {
-      // in case of component :is set to falsy value
+      // 防止动态组件 :is 属性设置为false时，需要做特殊处理
       return createEmptyVNode()
     }
-    // warn against non-primitive key
+    // key值只能为string，number这些原始数据类型
     if (isDef(data) && isDef(data.key) && !isPrimitive(data.key)
     ) {
       {
@@ -4056,6 +4057,7 @@
       };
     } else {
       updateComponent = function () {
+        // vm._render会生成vnode
         vm._update(vm._render(), hydrating);
       };
     }
@@ -5066,7 +5068,7 @@
   initMixin(Vue);
   stateMixin(Vue);
   eventsMixin(Vue);
-  lifecycleMixin(Vue);
+  lifecycleMixin(Vue); // 定义渲染相关的周期函数
   renderMixin(Vue);
 
   /*  */
@@ -5716,7 +5718,8 @@
   function setStyleScope (node, scopeId) {
     node.setAttribute(scopeId, '');
   }
-
+  
+  // 封装了一系列DOM操作的方法
   var nodeOps = /*#__PURE__*/Object.freeze({
     createElement: createElement$1,
     createElementNS: createElementNS,
@@ -6441,6 +6444,7 @@
     }
 
     return function patch (oldVnode, vnode, hydrating, removeOnly) {
+      debugger
       if (isUndef(vnode)) {
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return
@@ -6454,6 +6458,7 @@
         isInitialPatch = true;
         createElm(vnode, insertedVnodeQueue);
       } else {
+        // 判断是否为真实节点
         var isRealElement = isDef(oldVnode.nodeType);
         if (!isRealElement && sameVnode(oldVnode, vnode)) {
           // patch existing root node
@@ -8413,6 +8418,7 @@
     }
   } : {};
 
+  // 定义了模块的钩子函数
   var platformModules = [
     attrs,
     klass,
@@ -9015,6 +9021,7 @@
   extend(Vue.options.components, platformComponents);
 
   // install platform patch function
+  // 浏览器端才有DOM，服务端没有dom，所以patch为一个空函数
   Vue.prototype.__patch__ = inBrowser ? patch : noop;
 
   // public mount method
@@ -11654,6 +11661,7 @@
       var key = options.delimiters
         ? String(options.delimiters) + template
         : template;
+        // 缓存的作用：避免重复编译同个模板造成性能的浪费
       if (cache[key]) {
         return cache[key]
       }

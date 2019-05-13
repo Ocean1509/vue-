@@ -31,10 +31,22 @@
     new Vue({
       el: '#app',
       // template: '<div class="compile" v-if="show" :class="isBindClass"><p v-for="l in lists">{{l.name}}</p><div>sssss</div></div>',
-      render: function (createElement, context) {
-        return createElement('div', { attrs: {
-          id: 'foo',
-        }, is: this.show }, this.show)
+      // render: function (createElement, context) {
+      //   return createElement('div', { attrs: {
+      //     id: 'foo',
+      //   } }, this.show)
+      // },
+      // render: function(createElement) {
+      //   return createElement('div', this.lists.map(l => {
+      //     return createElement('span', l.name)
+      //   }))
+      // },
+      render: function (createElement) {
+        return createElement('div', {
+          attrs: {
+            id: 'app'
+          },
+        }, this.message)
       },
       // render: function (createElement, context) {
       //   return createElement('div', this.observeData, this.show)
@@ -50,6 +62,7 @@
               name: '222'
             }
           ],
+          message: 'Hello Vue!',
           observeData: {
             a: '--'
           }
