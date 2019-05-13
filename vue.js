@@ -3350,18 +3350,20 @@
   // wrapper function for providing a more flexible interface
   // without getting yelled at by flow
   function createElement (
-    context,
-    tag,
-    data,
-    children,
+    context, // vm 实例
+    tag, // vnode标签
+    data, //vnode相关数据
+    children, // 子vnode
     normalizationType,
     alwaysNormalize
   ) {
+    // 对传入参数做处理，可以没有data，如果没有data，则将第三个参数作为第四个参数使用，以此类推
     if (Array.isArray(data) || isPrimitive(data)) {
       normalizationType = children;
       children = data;
       data = undefined;
     }
+    // 根据是alwaysNormalize 区分是内部编译使用的，还是用户手写render使用的
     if (isTrue(alwaysNormalize)) {
       normalizationType = ALWAYS_NORMALIZE;
     }
@@ -3375,13 +3377,14 @@
     children,
     normalizationType
   ) {
+    // data 不能是响应式的
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
         "Avoid using observed data object as vnode data: " + (JSON.stringify(data)) + "\n" +
         'Always create fresh vnode data objects in each render!',
         context
       );
-      return createEmptyVNode()
+      return createEmptyVNode() // 返回注释节点
     }
     // object syntax in v-bind
     if (isDef(data) && isDef(data.is)) {
@@ -9012,6 +9015,7 @@
   extend(Vue.options.components, platformComponents);
 
   // install platform patch function
+  // 浏览器端才有DOM，服务端没有dom，所以patch为一个空函数
   Vue.prototype.__patch__ = inBrowser ? patch : noop;
 
   // public mount method
@@ -11651,6 +11655,7 @@
       var key = options.delimiters
         ? String(options.delimiters) + template
         : template;
+        // 缓存的作用：避免重复编译同个模板造成性能的浪费
       if (cache[key]) {
         return cache[key]
       }
