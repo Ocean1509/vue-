@@ -775,10 +775,10 @@
     componentOptions,
     asyncFactory
   ) {
-    this.tag = tag;
-    this.data = data;
-    this.children = children;
-    this.text = text;
+    this.tag = tag; // 标签
+    this.data = data;  // 数据
+    this.children = children; // 子节点
+    this.text = text; // 文本节点内容
     this.elm = elm;
     this.ns = undefined;
     this.context = context;
@@ -810,6 +810,7 @@
 
   Object.defineProperties( VNode.prototype, prototypeAccessors );
 
+  // 创建空的注释vnode节点
   var createEmptyVNode = function (text) {
     if ( text === void 0 ) text = '';
 
@@ -819,6 +820,7 @@
     return node
   };
 
+  // 创建空的文本vnode节点
   function createTextVNode (val) {
     return new VNode(undefined, undefined, undefined, String(val))
   }
@@ -1386,7 +1388,6 @@
     vm,
     key
   ) {
-    debugger
     if (childVal && "development" !== 'production') {
       assertObjectType(key, childVal, vm);
     }
@@ -3375,6 +3376,8 @@
     children,
     normalizationType
   ) {
+    debugger
+    // 数据对象不能放在Vue实例中的data去定义，实例定义的data对象，对象的属性值会加入到相应系统中，也就是会增加__ob__属性。
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
         "Avoid using observed data object as vnode data: " + (JSON.stringify(data)) + "\n" +
@@ -11689,7 +11692,6 @@
       // turn code into functions
       var res = {};
       var fnGenErrors = [];
-      debugger
       res.render = createFunction(compiled.render, fnGenErrors);
       res.staticRenderFns = compiled.staticRenderFns.map(function (code) {
         return createFunction(code, fnGenErrors)
@@ -11780,7 +11782,6 @@
         compiled.tips = tips;
         return compiled
       }
-      debugger
       return {
         compile: compile,
         compileToFunctions: createCompileToFunctionFn(compile)
@@ -11798,6 +11799,7 @@
     options
   ) {
     var ast = parse(template.trim(), options);
+    console.log(ast)
     if (options.optimize !== false) {
       optimize(ast, options);
     }

@@ -30,7 +30,31 @@
     // console.log(vm)
     new Vue({
       el: '#app',
-      template: '<div><span>www</span></div>'
+      // template: '<div class="compile" v-if="show" :class="isBindClass"><p v-for="l in lists">{{l.name}}</p><div>sssss</div></div>',
+      render: function (createElement, context) {
+        return createElement('div', { attrs: {
+          id: 'foo',
+        }, is: this.show }, this.show)
+      },
+      // render: function (createElement, context) {
+      //   return createElement('div', this.observeData, this.show)
+      // },
+      data() {
+        return {
+          isBindClass: 'compile1',
+          show: true,
+          lists: [{
+              name: '111'
+            },
+            {
+              name: '222'
+            }
+          ],
+          observeData: {
+            a: '--'
+          }
+        }
+      }
     })
   </script>
 </body>
