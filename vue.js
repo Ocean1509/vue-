@@ -810,7 +810,7 @@
 
   Object.defineProperties( VNode.prototype, prototypeAccessors );
 
-  // 创建空的注释vnode节点
+  // 创建注释vnode节点
   var createEmptyVNode = function (text) {
     if ( text === void 0 ) text = '';
 
@@ -820,7 +820,7 @@
     return node
   };
 
-  // 创建空的文本vnode节点
+  // 创建文本vnode节点
   function createTextVNode (val) {
     return new VNode(undefined, undefined, undefined, String(val))
   }
