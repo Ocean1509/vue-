@@ -3378,7 +3378,7 @@
     children,
     normalizationType
   ) {
-    // 数据对象不能放在Vue实例中的data去定义，实例定义的data对象，对象的属性值会加入到相应系统中，也就是会增加__ob__属性。
+    // 数据对象不能是定义在Vue data属性中的响应式数据。
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
         "Avoid using observed data object as vnode data: " + (JSON.stringify(data)) + "\n" +

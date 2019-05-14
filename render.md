@@ -146,3 +146,109 @@ function initRender(vm) {
     vm.$createElement = function (a, b, c, d) { return createElement(vm, a, b, c, d, true); };
 }
 ```
+
+createElement 方法实际上是对 _createElement 方法的封装，在调用_createElement创建Vnode之前，会对传入的参数进行处理。灵活的用法是：当没有data数据时，参数会往前填充。
+```
+function createElement (
+    context, // vm 实例
+    tag, // 标签
+    data, // 节点相关数据，属性
+    children, // 子节点
+    normalizationType,
+    alwaysNormalize // 区分内部编译生成的render还是手写render
+  ) {
+    // 对传入参数做处理，可以没有data，如果没有data，则将第三个参数作为第四个参数使用，往上类推。
+    if (Array.isArray(data) || isPrimitive(data)) {
+      normalizationType = children;
+      children = data;
+      data = undefined;
+    }
+    // 根据是alwaysNormalize 区分是内部编译使用的，还是用户手写render使用的
+    if (isTrue(alwaysNormalize)) {
+      normalizationType = ALWAYS_NORMALIZE;
+    }
+    return _createElement(context, tag, data, children, normalizationType) // 真正生成Vnode的方法
+  }
+```
+
+##### 4.3.1 数据规范检测
+Vue既然暴露给用户用render函数去写渲染模板，就需要考虑用户操作带来的不确定性，所以在生成Vnode的过程中，_createElement会先进行数据规范的检测，将不合法的数据类型提前暴露给用户。接下来将列举几个容易犯错误的实际场景，方便理解源码中如何处理这类错误的。
+
+- 1. 用响应式对象做节点属性
+```
+new Vue({
+    el: '#app',
+    render: function (createElement, context) {
+       return createElement('div', this.observeData, this.show)
+    },
+    data() {
+        return {
+            show: 'dom',
+            observeData: {
+                attr: {
+                    id: 'test'
+                }
+            }
+        }
+    }
+})
+```
+- 2. 特殊属性key为非字符串，数字类型
+```
+new Vue({
+    el: '#app',
+    render: function(createElement) {
+        return createElement('div', { key: this.lists }, this.lists.map(l => {
+           return createElement('span', l.name)
+        }))
+    },
+    data() {
+        return {
+            lists: [{
+              name: '111'
+            },
+            {
+              name: '222'
+            }
+          ],
+        }
+    }
+})
+```
+这些规范都会在创建Vnode节点之前发现并报错，源代码如下：
+```
+function _createElement (context,tag,data,children,normalizationType) {
+    // 数据对象不能是定义在Vue data属性中的响应式数据。
+    if (isDef(data) && isDef((data).__ob__)) {
+      warn(
+        "Avoid using observed data object as vnode data: " + (JSON.stringify(data)) + "\n" +
+        'Always create fresh vnode data objects in each render!',
+        context
+      );
+      return createEmptyVNode() // 返回注释节点
+    }
+    // 针对动态组件 :is 的特殊处理，组件相关知识放到特定章节分析。
+    if (isDef(data) && isDef(data.is)) {
+      tag = data.is;
+    }
+    if (!tag) {
+      // 防止动态组件 :is 属性设置为false时，需要做特殊处理
+      return createEmptyVNode()
+    }
+    // key值只能为string，number这些原始数据类型
+    if (isDef(data) && isDef(data.key) && !isPrimitive(data.key)
+    ) {
+      {
+        warn(
+          'Avoid using non-primitive value as key, ' +
+          'use string/number value instead.',
+          context
+        );
+      }
+    }
+    ···
+    // 后续操作
+  }
+```
+
+##### 4.3.2 子节点children规范化
