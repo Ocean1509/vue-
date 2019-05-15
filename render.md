@@ -252,3 +252,7 @@ function _createElement (context,tag,data,children,normalizationType) {
 ```
 
 ##### 4.3.2 子节点children规范化
+Virtual DOM需要保证每一个子节点都是Vnode类型,通过
+
+需要通过编程实现在多种组件中选择一种。
+children、props 或者 data 在传递给子组件之前，处理它们。

@@ -9,66 +9,46 @@
 </head>
 
 <body>
-  <!-- <div id="app">
-    dd
-    <script type="text/x-template" id="b">
-      <p>Hello hello hello</p>
-    </script>
-  </div> -->
   <div id="app">
-    <div>test1</div>
-    <!-- <script type="x-template" id="test">
-      <p>test</p>
-  </script> -->
+    <test3 :msg="msg">
+      <p>second</p>
+    </test3>
   </div>
   <script src="./vue.js"></script>
   <script>
-    // Vue.component('component-a', {
-    //   template: '<div>a</div>'
-    // })
-    // var vm = new Vue({ el: '#app'})
-    // console.log(vm)
-    new Vue({
-      el: '#app',
-      // template: '<div class="compile" v-if="show" :class="isBindClass"><p v-for="l in lists">{{l.name}}</p><div>sssss</div></div>',
-      // render: function (createElement, context) {
-      //   return createElement('div', { attrs: {
-      //     id: 'foo',
-      //   } }, this.show)
-      // },
-      // render: function(createElement) {
-      //   return createElement('div', this.lists.map(l => {
-      //     return createElement('span', l.name)
-      //   }))
-      // },
-      render: function (createElement) {
-        return createElement('div', {
-          attrs: {
-            id: 'app'
-          },
-        }, this.message)
-      },
-      // render: function (createElement, context) {
-      //   return createElement('div', this.observeData, this.show)
-      // },
-      data() {
-        return {
-          isBindClass: 'compile1',
-          show: true,
-          lists: [{
-              name: '111'
-            },
-            {
-              name: '222'
-            }
-          ],
-          message: 'Hello Vue!',
-          observeData: {
-            a: '--'
-          }
+      var test1 = {
+        props: ['msg'],
+        render: function (createElement, context) {
+          return createElement('h1', this.msg)
         }
       }
-    })
+
+      var test2 = {
+        props: ['msg'],
+        render: function (createElement, context) {
+          return createElement('h2', this.msg)
+        }
+      }
+
+
+      Vue.component('test3', {
+        functional: true,
+        render: function (createElement, context) {
+          var get = function() {
+            console.log(context)
+            return test1
+          }
+          return createElement(get(), { props: { msg: context.props.msg } }, context.children)
+        }
+      })
+      new Vue({
+        el: '#app',
+        data () {
+          return {
+            msg: 1
+          }
+        }
+      })
   </script>
 </body>
 

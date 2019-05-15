@@ -3414,9 +3414,12 @@
       data.scopedSlots = { default: children[0] };
       children.length = 0;
     }
+    debugger
     if (normalizationType === ALWAYS_NORMALIZE) {
+      // 用户定义render函数
       children = normalizeChildren(children);
     } else if (normalizationType === SIMPLE_NORMALIZE) {
+      // render 函数是编译生成的
       children = simpleNormalizeChildren(children);
     }
     var vnode, ns;
@@ -6444,7 +6447,6 @@
     }
 
     return function patch (oldVnode, vnode, hydrating, removeOnly) {
-      debugger
       if (isUndef(vnode)) {
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return
