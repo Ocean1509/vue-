@@ -89,7 +89,7 @@ function cloneVNode (vnode) {
   }
 ```
 
-### 4.3 render函数生成Vnode
+### 4.3 Vnode的创建
 重新回顾一下挂载的流程，挂载的过程调用的是Vue实例上$mount方法，而$mount的核心是mountComponent方法。在这之前，如果传递的是template模板，会经过一系列的模板编译过程，并根据不同平台生成对应代码，浏览器对应的是render函数，如果传递是render函数，则忽略模板编译过程，此后通过vm._render()方法将render函数转化为Virtual DOM，最终利用vm._update()将Virtual DOM渲染为真实的DOM。
 
 ```
@@ -252,7 +252,56 @@ function _createElement (context,tag,data,children,normalizationType) {
 ```
 
 ##### 4.3.2 子节点children规范化
-Virtual DOM需要保证每一个子节点都是Vnode类型,通过
+Virtual DOM需要保证每一个子节点都是Vnode类型,这里分两种场景。
+- 1.render函数编译，理论上通过render函数编译生成的都是Vnode类型，但是有一个例外，函数式组件返回的是一个数组，什么是函数式组件，概况(关于组件，以及函数式组件内容，我们放到专门讲组件的时候专题分析),这个时候Vue的处理是将整个children拍平。
+- 2.用户定义render函数，这个时候也分为两种情况，一个是chidren为文本节点，这时候通过前面介绍的createTextVNode 创建一个文本节点的 VNode; 另一种相对复杂，当children中有v-for的时候会出现嵌套数组，这时候的处理逻辑是，遍历children，对每个节点进行判断，如果依旧是数组，则继续递归调用，直到是基础类型时，调用createTextVnode方法转化为Vnode。这样经过递归，children变成了一个类型为Vnode的数组。
+```
+function _createElement() {
+    ···
+    if (normalizationType === ALWAYS_NORMALIZE) {
+      // 用户定义render函数
+      children = normalizeChildren(children);
+    } else if (normalizationType === SIMPLE_NORMALIZE) {
+      // render 函数是编译生成的
+      children = simpleNormalizeChildren(children);
+    }
+}
 
-需要通过编程实现在多种组件中选择一种。
-children、props 或者 data 在传递给子组件之前，处理它们。
+function simpleNormalizeChildren (children) {
+    for (var i = 0; i < children.length; i++) {
+        // 子节点为数组时，进行开平操作，压成一维数组。
+        if (Array.isArray(children[i])) {
+        return Array.prototype.concat.apply([], children)
+        }
+    }
+    return children
+}
+
+function normalizeChildren (children) {
+    // 递归调用，直到子节点是基础类型，则调用创建文本节点Vnode
+    return isPrimitive(children)
+      ? [createTextVNode(children)]
+      : Array.isArray(children)
+        ? normalizeArrayChildren(children)
+        : undefined
+  }
+
+// 判断是否基础类型
+function isPrimitive (value) {
+    return (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'symbol' ||
+      typeof value === 'boolean'
+    )
+  }
+```
+
+=== 进行数据检测和组件规范化后，接下来通过new VNode便可以生成一棵VNode树。具体细节由于篇幅原因，不展开分析。===
+
+
+### 4.4 /虚拟Vnode映射成真实DOM
+回到 updateComponent的最后一个过程,render   
+updateComponent = function () {
+        vm._update(vm._render(), hydrating);
+    };
