@@ -5072,7 +5072,7 @@
   stateMixin(Vue);
   eventsMixin(Vue);
   lifecycleMixin(Vue); // 定义渲染相关的周期函数
-  renderMixin(Vue);
+  renderMixin(Vue); // 定义渲染相关的函数
 
   /*  */
 
