@@ -5139,10 +5139,12 @@
       Sub.prototype = Object.create(Super.prototype); // 子类继承于父类
       Sub.prototype.constructor = Sub;
       Sub.cid = cid++;
+      // 父类配置和子类配置合并
       Sub.options = mergeOptions(
         Super.options,
         extendOptions
       );
+      // 子类构造器的super属性指向父类构造器
       Sub['super'] = Super;
 
       // For props and computed properties, we define the proxy getters on
@@ -5156,6 +5158,7 @@
       }
 
       // allow further extension/mixin/plugin usage
+      // 同时子类构造器拥有extend等方法
       Sub.extend = Super.extend;
       Sub.mixin = Super.mixin;
       Sub.use = Super.use;
@@ -5209,19 +5212,24 @@
         definition
       ) {
         if (!definition) {
+          // 直接返回注册组件的构造函数
           return this.options[type + 's'][id]
         } else {
           /* istanbul ignore if */
           if (type === 'component') {
+            // 验证component组件名字是否合法
             validateComponentName(id);
           }
           if (type === 'component' && isPlainObject(definition)) {
+            // 组件名称设置
             definition.name = definition.name || id;
+            // Vue.extend() 创建子组件，返回子类构造器
             definition = this.options._base.extend(definition);
           }
           if (type === 'directive' && typeof definition === 'function') {
             definition = { bind: definition, update: definition };
           }
+          // 将创建的子类构造器存储到根Vue配置下的component中。
           this.options[type + 's'][id] = definition;
           return definition
         }
@@ -5405,16 +5413,20 @@
 
     // this is used to identify the "base" constructor to extend all plain-object
     // components with in Weex's multi-instance scenarios.
+    // options里的_base属性存储Vue构造器
     Vue.options._base = Vue;
 
     extend(Vue.options.components, builtInComponents);
 
     initUse(Vue);
     initMixin$1(Vue);
+    // 定义extend扩展子类构造器的方法
     initExtend(Vue);
+    // 
     initAssetRegisters(Vue);
   }
 
+  // 初始化全局的api
   initGlobalAPI(Vue);
 
   Object.defineProperty(Vue.prototype, '$isServer', {
