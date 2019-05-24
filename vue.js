@@ -1587,6 +1587,7 @@
    * This function is used because child instances need access
    * to assets defined in its ancestor chain.
    */
+  // 需要明确组件是否已经被注册
   function resolveAsset (
     options,
     type,
@@ -3193,6 +3194,7 @@
       return
     }
 
+    // baseCtor 代表Vue构造器
     var baseCtor = context.$options._base;
 
     // plain options object: turn it into a constructor
@@ -3210,6 +3212,7 @@
     }
 
     // async component
+    // 异步组件分支
     var asyncFactory;
     if (isUndef(Ctor.cid)) {
       asyncFactory = Ctor;
@@ -3232,6 +3235,7 @@
 
     // resolve constructor options in case global mixins are applied after
     // component constructor creation
+    // 构造器配置合并
     resolveConstructorOptions(Ctor);
 
     // transform component v-model data into props & events
@@ -3243,6 +3247,7 @@
     var propsData = extractPropsFromVNodeData(data, Ctor, tag);
 
     // functional component
+    // 函数式组件
     if (isTrue(Ctor.options.functional)) {
       return createFunctionalComponent(Ctor, propsData, data, context, children)
     }
@@ -3254,6 +3259,7 @@
     // so it gets processed during parent component patch.
     data.on = data.nativeOn;
 
+    // 抽象组件
     if (isTrue(Ctor.options.abstract)) {
       // abstract components do not keep anything
       // other than props & listeners & slot
@@ -3267,6 +3273,7 @@
     }
 
     // install component management hooks onto the placeholder node
+    // 挂载组件钩子
     installComponentHooks(data);
 
     // return a placeholder vnode

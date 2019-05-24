@@ -4,7 +4,7 @@ import Vue from 'vue'
 import App from './App'
 
 debugger
-Vue.component('21', {
+Vue.component('my-test', {
   template: '<div>{{test}}</div>',
   data () {
     return {
@@ -16,6 +16,6 @@ console.log(Vue.component('my-test'))
 /* eslint-disable no-new */
 var vm = new Vue({
   el: '#app',
-  template: '<div id="app"><my-test/></div>'
+  template: '<div id="app"><span>4324324</span><my-test/></div>'
 })
 console.log(vm)
