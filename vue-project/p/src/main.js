@@ -3,7 +3,6 @@
 import Vue from 'vue'
 import App from './App'
 
-debugger
 Vue.component('my-test', {
   template: '<div>{{test}}</div>',
   data () {
@@ -14,6 +13,7 @@ Vue.component('my-test', {
 })
 console.log(Vue.component('my-test'))
 /* eslint-disable no-new */
+debugger
 var vm = new Vue({
   el: '#app',
   template: '<div id="app"><span>4324324</span><my-test/></div>'
