@@ -1587,6 +1587,7 @@
    * This function is used because child instances need access
    * to assets defined in its ancestor chain.
    */
+  // 需要明确组件是否已经被注册
   function resolveAsset (
     options,
     type,
@@ -3193,6 +3194,7 @@
       return
     }
 
+    // baseCtor 代表Vue构造器
     var baseCtor = context.$options._base;
 
     // plain options object: turn it into a constructor
@@ -3210,6 +3212,7 @@
     }
 
     // async component
+    // 异步组件分支
     var asyncFactory;
     if (isUndef(Ctor.cid)) {
       asyncFactory = Ctor;
@@ -3232,6 +3235,7 @@
 
     // resolve constructor options in case global mixins are applied after
     // component constructor creation
+    // 构造器配置合并
     resolveConstructorOptions(Ctor);
 
     // transform component v-model data into props & events
@@ -3243,6 +3247,7 @@
     var propsData = extractPropsFromVNodeData(data, Ctor, tag);
 
     // functional component
+    // 函数式组件
     if (isTrue(Ctor.options.functional)) {
       return createFunctionalComponent(Ctor, propsData, data, context, children)
     }
@@ -3254,6 +3259,7 @@
     // so it gets processed during parent component patch.
     data.on = data.nativeOn;
 
+    // 抽象组件
     if (isTrue(Ctor.options.abstract)) {
       // abstract components do not keep anything
       // other than props & listeners & slot
@@ -3267,6 +3273,7 @@
     }
 
     // install component management hooks onto the placeholder node
+    // 挂载组件钩子
     installComponentHooks(data);
 
     // return a placeholder vnode
@@ -5072,7 +5079,7 @@
   stateMixin(Vue);
   eventsMixin(Vue);
   lifecycleMixin(Vue); // 定义渲染相关的周期函数
-  renderMixin(Vue);
+  renderMixin(Vue); // 定义渲染相关的函数
 
   /*  */
 
@@ -5139,10 +5146,12 @@
       Sub.prototype = Object.create(Super.prototype); // 子类继承于父类
       Sub.prototype.constructor = Sub;
       Sub.cid = cid++;
+      // 父类配置和子类配置合并
       Sub.options = mergeOptions(
         Super.options,
         extendOptions
       );
+      // 子类构造器的super属性指向父类构造器
       Sub['super'] = Super;
 
       // For props and computed properties, we define the proxy getters on
@@ -5156,6 +5165,7 @@
       }
 
       // allow further extension/mixin/plugin usage
+      // 同时子类构造器拥有extend等方法
       Sub.extend = Super.extend;
       Sub.mixin = Super.mixin;
       Sub.use = Super.use;
@@ -5209,19 +5219,24 @@
         definition
       ) {
         if (!definition) {
+          // 直接返回注册组件的构造函数
           return this.options[type + 's'][id]
         } else {
           /* istanbul ignore if */
           if (type === 'component') {
+            // 验证component组件名字是否合法
             validateComponentName(id);
           }
           if (type === 'component' && isPlainObject(definition)) {
+            // 组件名称设置
             definition.name = definition.name || id;
+            // Vue.extend() 创建子组件，返回子类构造器
             definition = this.options._base.extend(definition);
           }
           if (type === 'directive' && typeof definition === 'function') {
             definition = { bind: definition, update: definition };
           }
+          // 将创建的子类构造器存储到根Vue配置下的component中。
           this.options[type + 's'][id] = definition;
           return definition
         }
@@ -5405,16 +5420,20 @@
 
     // this is used to identify the "base" constructor to extend all plain-object
     // components with in Weex's multi-instance scenarios.
+    // options里的_base属性存储Vue构造器
     Vue.options._base = Vue;
 
     extend(Vue.options.components, builtInComponents);
 
     initUse(Vue);
     initMixin$1(Vue);
+    // 定义extend扩展子类构造器的方法
     initExtend(Vue);
+    // 
     initAssetRegisters(Vue);
   }
 
+  // 初始化全局的api
   initGlobalAPI(Vue);
 
   Object.defineProperty(Vue.prototype, '$isServer', {
