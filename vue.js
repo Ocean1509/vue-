@@ -2087,6 +2087,7 @@
       config.keyCodes = new Proxy(config.keyCodes, {
         set: function set (target, key, value) {
           if (isBuiltInModifier(key)) {
+         
             warn(("Avoid overwriting built-in modifier in config.keyCodes: ." + key));
             return false
           } else {
@@ -3117,6 +3118,7 @@
   /*  */
 
   // inline hooks to be invoked on component VNodes during patch
+  // 组件内部自带钩子
   var componentVNodeHooks = {
     init: function init (vnode, hydrating) {
       if (
@@ -3183,12 +3185,13 @@
 
   var hooksToMerge = Object.keys(componentVNodeHooks);
 
+  // 创建子组件过程
   function createComponent (
-    Ctor,
+    Ctor, // 子类构造器
     data,
-    context,
-    children,
-    tag
+    context, // vm实例
+    children, // 子节点
+    tag // 子组件占位符
   ) {
     if (isUndef(Ctor)) {
       return
@@ -3206,6 +3209,7 @@
     // reject.
     if (typeof Ctor !== 'function') {
       {
+        // 组件定义错误
         warn(("Invalid Component definition: " + (String(Ctor))), context);
       }
       return
@@ -3278,6 +3282,7 @@
 
     // return a placeholder vnode
     var name = Ctor.options.name || tag;
+    // 创建子组件vnode
     var vnode = new VNode(
       ("vue-component-" + (Ctor.cid) + (name ? ("-" + name) : '')),
       data, undefined, undefined, undefined, context,
@@ -3303,6 +3308,7 @@
       options.render = inlineTemplate.render;
       options.staticRenderFns = inlineTemplate.staticRenderFns;
     }
+    // 执行vue子组件实例化
     return new vnode.componentOptions.Ctor(options)
   }
 
@@ -5927,6 +5933,8 @@
       }
 
       vnode.isRootInsert = !nested; // for transition enter check
+
+      // 递归创建子组件真实节点
       if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
         return
       }

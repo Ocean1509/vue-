@@ -2,6 +2,11 @@
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import App from './App'
+import test from './test'
+
+
+console.log(test)
+debugger
 
 Vue.component('my-test', {
   template: '<div>{{test}}</div>',
@@ -11,11 +16,13 @@ Vue.component('my-test', {
     }
   }
 })
-console.log(Vue.component('my-test'))
+// console.log(Vue.component('my-test'))
 /* eslint-disable no-new */
-debugger
 var vm = new Vue({
   el: '#app',
-  template: '<div id="app"><span>4324324</span><my-test/></div>'
+  components: {
+    test
+  },
+  template: '<div id="app"><span>4324324</span><test><test/></div>'
 })
 console.log(vm)
