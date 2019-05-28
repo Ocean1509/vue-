@@ -6,7 +6,6 @@ import test from './test'
 
 
 console.log(test)
-debugger
 
 Vue.component('my-test', {
   template: '<div>{{test}}</div>',
