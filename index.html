@@ -19,6 +19,7 @@
       var test1 = {
         props: ['msg'],
         render: function (createElement, context) {
+          console.log(context)
           return createElement('h1', this.msg)
         }
       }
@@ -33,16 +34,19 @@
 
       Vue.component('test3', {
         functional: true,
+        props: ['msg'],
         render: function (createElement, context) {
+          console.log(context)
           var get = function() {
             console.log(context)
             return test1
           }
-          return createElement(get(), { props: { msg: context.props.msg } }, context.children)
+          return createElement(get(), { props: { msg: context.props.msg } }, context)
         }
       })
       new Vue({
         el: '#app',
+        // template: '<div id="#app"><test3></test3></div>',
         data () {
           return {
             msg: 1

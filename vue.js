@@ -82,6 +82,7 @@
     return n >= 0 && Math.floor(n) === n && isFinite(val)
   }
 
+  // 判断promise对象的方法
   function isPromise (val) {
     return (
       isDef(val) &&
@@ -344,6 +345,7 @@
   /**
    * Ensure a function is called only once.
    */
+  // once函数保证了这个调用函数只在系统种调用一次
   function once (fn) {
     var called = false;
     return function () {
@@ -1880,6 +1882,7 @@
       if (res && !res._isVue && isPromise(res)) {
         // issue #9511
         // reassign to res to avoid catch triggering multiple times when nested calls
+        // 当生命周期钩子函数内部执行返回promise对象是，如果捕获异常，则会对异常信息做一层包装返回
         res = res.catch(function (e) { return handleError(e, vm, info + " (Promise/async)"); });
       }
     } catch (e) {
@@ -3201,6 +3204,7 @@
     var baseCtor = context.$options._base;
 
     // plain options object: turn it into a constructor
+    // 针对局部注册组件创建子类构造器
     if (isObject(Ctor)) {
       Ctor = baseCtor.extend(Ctor);
     }
@@ -3219,6 +3223,7 @@
     // 异步组件分支
     var asyncFactory;
     if (isUndef(Ctor.cid)) {
+      // 异步工厂函数
       asyncFactory = Ctor;
       Ctor = resolveAsyncComponent(asyncFactory, baseCtor);
       if (Ctor === undefined) {
@@ -3427,7 +3432,6 @@
       data.scopedSlots = { default: children[0] };
       children.length = 0;
     }
-    debugger
     if (normalizationType === ALWAYS_NORMALIZE) {
       // 用户定义render函数
       children = normalizeChildren(children);
@@ -3677,6 +3681,8 @@
 
       var resolve = once(function (res) {
         // cache resolved
+        
+        // 转成成组件构造器，并将其缓存到resolved属性中。
         factory.resolved = ensureCtor(res, baseCtor);
         // invoke callbacks only if this is not a synchronous resolve
         // (async resolves are shimmed as synchronous during SSR)
@@ -3698,6 +3704,7 @@
         }
       });
 
+      // 创建子组件时会先执行工厂函数，并将resolve和reject传入
       var res = factory(resolve, reject);
 
       if (isObject(res)) {
@@ -4995,10 +5002,13 @@
       // expose real self
       vm._self = vm;
       initLifecycle(vm);
+      // 初始化事件处理
       initEvents(vm);
+      // 定义渲染函数
       initRender(vm);
       callHook(vm, 'beforeCreate');
       initInjections(vm); // resolve injections before data/props
+      // 构建响应式系统
       initState(vm);
       initProvide(vm); // resolve provide after data/props
       callHook(vm, 'created');
@@ -5914,6 +5924,7 @@
 
     var creatingElmInVPre = 0;
 
+    // 创建真实dom
     function createElm (
       vnode,
       insertedVnodeQueue,
@@ -5940,6 +5951,7 @@
       }
 
       var data = vnode.data;
+      // 子vnode节点
       var children = vnode.children;
       var tag = vnode.tag;
       if (isDef(tag)) {
@@ -11836,7 +11848,6 @@
     options
   ) {
     var ast = parse(template.trim(), options);
-    console.log(ast)
     if (options.optimize !== false) {
       optimize(ast, options);
     }
