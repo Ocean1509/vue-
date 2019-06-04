@@ -3258,6 +3258,8 @@
     // functional component
     // 函数式组件
     if (isTrue(Ctor.options.functional)) {
+      debugger
+      // Ctor构造器，propsData: 传入组件的props,data: 组件的属性， context: vue实例
       return createFunctionalComponent(Ctor, propsData, data, context, children)
     }
 
@@ -3707,6 +3709,7 @@
       // 创建子组件时会先执行工厂函数，并将resolve和reject传入
       var res = factory(resolve, reject);
 
+      // promise异步组件处理
       if (isObject(res)) {
         if (isPromise(res)) {
           // () => Promise
@@ -3717,10 +3720,12 @@
           res.component.then(resolve, reject);
 
           if (isDef(res.error)) {
+            // 异步错误时组件的处理，创建错误组件的子类构造器，并赋值给errorComp
             factory.errorComp = ensureCtor(res.error, baseCtor);
           }
 
           if (isDef(res.loading)) {
+            // 异步加载时组件的处理，创建错误组件的子类构造器，并赋值给errorComp
             factory.loadingComp = ensureCtor(res.loading, baseCtor);
             if (res.delay === 0) {
               factory.loading = true;
@@ -3736,6 +3741,7 @@
 
           if (isDef(res.timeout)) {
             setTimeout(function () {
+              // 定时器，规定时间内 resolved没有赋值，则算加载失败
               if (isUndef(factory.resolved)) {
                 reject(
                   "timeout (" + (res.timeout) + "ms)"
