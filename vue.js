@@ -181,6 +181,7 @@
   /**
    * Capitalize a string.
    */
+
   var capitalize = cached(function (str) {
     return str.charAt(0).toUpperCase() + str.slice(1)
   });
@@ -188,6 +189,7 @@
   /**
    * Hyphenate a camelCase string.
    */
+  // aB 转 a-b
   var hyphenateRE = /\B([A-Z])/g;
   var hyphenate = cached(function (str) {
     return str.replace(hyphenateRE, '-$1').toLowerCase()
@@ -1015,6 +1017,7 @@
 
   /**
    * Define a reactive property on an Object.
+   * 将props定义成响应式对象
    */
   function defineReactive$$1 (
     obj,
@@ -1187,6 +1190,7 @@
    * Helper that recursively merges two data objects together.
    */
   function mergeData (to, from) {
+    debugger
     if (!from) { return to }
     var key, toVal, fromVal;
     var keys = hasSymbol
@@ -1220,6 +1224,7 @@
     childVal,
     vm
   ) {
+    debugger
     if (!vm) {
       // in a Vue.extend merge, both should be functions
       if (!childVal) {
@@ -2301,6 +2306,7 @@
       return
     }
     var res = {};
+    // data.attrs针对编译生成的render函数，data.props针对用户自定义的render函数
     var attrs = data.attrs;
     var props = data.props;
     if (isDef(attrs) || isDef(props)) {
@@ -2312,6 +2318,7 @@
             key !== keyInLowerCase &&
             attrs && hasOwn(attrs, keyInLowerCase)
           ) {
+            // HTML 中的特性名是大小写不敏感的，所以浏览器会把所有大写字符解释为小写字符。这意味着当你使用 DOM 中的模板时，camelCase (驼峰命名法) 的 prop 名需要使用其等价的 kebab-case (短横线分隔命名) 命
             tip(
               "Prop \"" + keyInLowerCase + "\" is passed to component " +
               (formatComponentName(tag || Ctor)) + ", but the declared prop name is" +
@@ -3196,6 +3203,7 @@
     children, // 子节点
     tag // 子组件占位符
   ) {
+
     if (isUndef(Ctor)) {
       return
     }
@@ -3241,7 +3249,6 @@
     }
 
     data = data || {};
-
     // resolve constructor options in case global mixins are applied after
     // component constructor creation
     // 构造器配置合并
@@ -3251,14 +3258,13 @@
     if (isDef(data.model)) {
       transformModel(Ctor.options, data);
     }
-
     // extract props
+    // props规范性校验
     var propsData = extractPropsFromVNodeData(data, Ctor, tag);
 
     // functional component
     // 函数式组件
     if (isTrue(Ctor.options.functional)) {
-      debugger
       // Ctor构造器，propsData: 传入组件的props,data: 组件的属性， context: vue实例
       return createFunctionalComponent(Ctor, propsData, data, context, children)
     }
@@ -4862,6 +4868,7 @@
     var props = vm.$options.props;
     for (var key in methods) {
       {
+        // method必须为函数形式
         if (typeof methods[key] !== 'function') {
           warn(
             "Method \"" + key + "\" has type \"" + (typeof methods[key]) + "\" in the component definition. " +
@@ -4869,12 +4876,14 @@
             vm
           );
         }
+        // methods方法名不能和props重复
         if (props && hasOwn(props, key)) {
           warn(
             ("Method \"" + key + "\" has already been defined as a prop."),
             vm
           );
         }
+        //  不能以_ or $.这些Vue保留标志开头
         if ((key in vm) && isReserved(key)) {
           warn(
             "Method \"" + key + "\" conflicts with an existing Vue instance method. " +
@@ -4882,6 +4891,7 @@
           );
         }
       }
+      // 直接复制到实例的属性上
       vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm);
     }
   }
@@ -5014,6 +5024,7 @@
       initRender(vm);
       callHook(vm, 'beforeCreate');
       initInjections(vm); // resolve injections before data/props
+      debugger
       // 构建响应式系统
       initState(vm);
       initProvide(vm); // resolve provide after data/props

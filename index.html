@@ -9,45 +9,40 @@
 </head>
 
 <body>
-  <div id="app">
+  <!-- <div id="app">
     <test3 :msg="msg" d="21">
       <p>second</p>
     </test3>
+  </div> -->
+  <div id="app">
+    <test :num-d="num"></test>
   </div>
   <script src="./vue.js"></script>
   <script>
-      var test1 = {
-        props: ['msg'],
-        render: function (createElement, context) {
-          return createElement('h1', this.msg)
-        }
-      }
-
-      var test2 = {
-        props: ['msg'],
-        render: function (createElement, context) {
-          return createElement('h2', this.msg)
-        }
-      }
-
-
-      Vue.component('test3', {
-        functional: true,
-        props: ['msg'],
-        render: function (createElement, context) {
-          var get = function() {
-            console.log(context)
-            return test1
-          }
-          return createElement(get(), context)
-        }
-      })
       new Vue({
         el: '#app',
-        // template: '<div id="#app"><test3></test3></div>',
-        data () {
-          return {
-            msg: 1
+        data: {
+          num: 123
+        },
+        components: {
+          test: {
+            template: '<div><span>{{test1}}|{{numF}}|{{test2}}</span><span @click="change">修改</span></div>',
+            data () {
+              return {
+                test1: 2
+              }
+            },
+            props: ['numD'],
+            computed: {
+              test2() {
+                return this.test1 + 1;
+              }
+            },
+            methods: {
+              change() {
+                this.test1 ++
+              }
+            }
           }
         }
       })
