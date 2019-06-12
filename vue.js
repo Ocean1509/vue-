@@ -926,11 +926,15 @@
    * object's property keys into getter/setters that
    * collect dependencies and dispatch updates.
    */
+  // 观察者类，对象只要设置成拥有观察属性，则对象下的所有属性都会重写getter和setter方法，而getter，setting方法会进行依赖的收集和派发更新
+  // 一个实例一个Observer
   var Observer = function Observer (value) {
     this.value = value;
     this.dep = new Dep();
     this.vmCount = 0;
+    // 将__ob__属性设置成不可枚举属性。外部无法通过遍历获取。
     def(value, '__ob__', this);
+    // 数组处理
     if (Array.isArray(value)) {
       if (hasProto) {
         protoAugment(value, arrayMethods);
@@ -939,6 +943,7 @@
       }
       this.observeArray(value);
     } else {
+    // 对象处理
       this.walk(value);
     }
   };
@@ -1017,7 +1022,7 @@
 
   /**
    * Define a reactive property on an Object.
-   * 将props定义成响应式对象
+   * 将data, props定义成响应式对象
    */
   function defineReactive$$1 (
     obj,
@@ -1058,6 +1063,7 @@
         return value
       },
       set: function reactiveSetter (newVal) {
+        debugger
         var value = getter ? getter.call(obj) : val;
         /* eslint-disable no-self-compare */
         if (newVal === value || (newVal !== newVal && value !== value)) {
@@ -1190,7 +1196,6 @@
    * Helper that recursively merges two data objects together.
    */
   function mergeData (to, from) {
-    debugger
     if (!from) { return to }
     var key, toVal, fromVal;
     var keys = hasSymbol
@@ -1224,7 +1229,6 @@
     childVal,
     vm
   ) {
-    debugger
     if (!vm) {
       // in a Vue.extend merge, both should be functions
       if (!childVal) {
@@ -4436,11 +4440,11 @@
    * This is used for both the $watch() api and directives.
    */
   var Watcher = function Watcher (
-    vm,
-    expOrFn,
-    cb,
-    options,
-    isRenderWatcher
+    vm, // 组件实例
+    expOrFn, // 执行函数
+    cb, // 回调
+    options, // 配置
+    isRenderWatcher // 是否为渲染watcher
   ) {
     this.vm = vm;
     if (isRenderWatcher) {
@@ -4488,6 +4492,7 @@
 
   /**
    * Evaluate the getter, and re-collect dependencies.
+   * 重新计算getter，并收集依赖
    */
   Watcher.prototype.get = function get () {
     pushTarget(this);
@@ -4641,6 +4646,8 @@
     set: noop
   };
 
+  // 数据代理
+  // vm, _data, key
   function proxy (target, sourceKey, key) {
     sharedPropertyDefinition.get = function proxyGetter () {
       return this[sourceKey][key]
@@ -4692,6 +4699,7 @@
           );
         }
         defineReactive$$1(props, key, value, function () {
+          // props在组件内部更新时会触发setting，执行该回调函数
           if (!isRoot && !isUpdatingChildComponent) {
             warn(
               "Avoid mutating a prop directly since the value will be " +
@@ -4736,6 +4744,7 @@
     while (i--) {
       var key = keys[i];
       {
+        // 命名不能和方法重复
         if (methods && hasOwn(methods, key)) {
           warn(
             ("Method \"" + key + "\" has already been defined as a data property."),
@@ -4743,6 +4752,7 @@
           );
         }
       }
+      // 命名不能和props重复
       if (props && hasOwn(props, key)) {
         warn(
           "The data property \"" + key + "\" is already declared as a prop. " +
@@ -4750,6 +4760,7 @@
           vm
         );
       } else if (!isReserved(key)) {
+        // 数据代理，用户可直接通过vm实例返回data数据
         proxy(vm, "_data", key);
       }
     }
@@ -4804,6 +4815,7 @@
       if (!(key in vm)) {
         defineComputed(vm, key, userDef);
       } else {
+        // 不能和props，data命名冲突
         if (key in vm.$data) {
           warn(("The computed property \"" + key + "\" is already defined in data."), vm);
         } else if (vm.$options.props && key in vm.$options.props) {
@@ -4963,6 +4975,7 @@
       options = options || {};
       options.user = true;
       var watcher = new Watcher(vm, expOrFn, cb, options);
+      // 当watch有immediate选项时，立即执行cb方法，即不需要等待属性变化，立刻执行回调。
       if (options.immediate) {
         try {
           cb.call(vm, watcher.value);
@@ -5024,7 +5037,7 @@
       initRender(vm);
       callHook(vm, 'beforeCreate');
       initInjections(vm); // resolve injections before data/props
-      debugger
+      // debugger
       // 构建响应式系统
       initState(vm);
       initProvide(vm); // resolve provide after data/props

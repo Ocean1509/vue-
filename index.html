@@ -19,14 +19,14 @@
   </div>
   <script src="./vue.js"></script>
   <script>
-      new Vue({
+      var vm = new Vue({
         el: '#app',
         data: {
           num: 123
         },
         components: {
           test: {
-            template: '<div><span>{{test1}}|{{numF}}|{{test2}}</span><span @click="change">修改</span></div>',
+            template: '<div><span>{{test1}}|{{numD}}|{{test2}}</span><span @click="change">修改</span></div>',
             data () {
               return {
                 test1: 2
@@ -38,6 +38,11 @@
                 return this.test1 + 1;
               }
             },
+            watch: {
+              test1() {
+                console.log('----------')
+              }
+            },
             methods: {
               change() {
                 this.test1 ++
@@ -46,7 +51,9 @@
           }
         }
       })
+      console.log(vm)
   </script>
+  
 </body>
 
 </html>
