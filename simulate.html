@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>模拟响应式系统</title>
+</head>
+<body>
+  <div id="app">{{test}}</div>
+  <script>
+  (function(global) {
+    const defineReactive = (obj, key) => {
+
+      const dep = new Dep();
+
+      const property = Object.getOwnPropertyDescriptor(obj);
+      let val = obj[key]
+      if(property && property.configurable === false) return;
+      Object.defineProperty(obj, key, {
+        configurable: true,
+        enumerable: true,
+        get() {
+          // 做依赖的收集
+          if(Dep.target) {
+            dep.depend()
+          }
+          return val
+        },
+        set(nval) {
+          if(nval === val) return
+          // 派发更新
+          val = nval
+          dep.notify();
+        }
+      })
+
+    }
+
+    class Observer {
+      constructor(data) {
+        this.walk(data)
+      }
+
+      walk(obj) {
+        const keys = Object.keys(obj);
+        for(let i = 0;i< keys.length; i++) {
+          defineReactive(obj, keys[i])
+        }
+      }
+    }
+
+
+
+    let uid = 0;
+    class Dep {
+      
+      constructor() {
+        this.id = uid++;
+        this.subs = []
+      }
+
+      // 依赖收集
+      depend() {
+        if(Dep.target) {
+          // Dep.target是当前的watcher
+          this.subs.push(Dep.target)
+        }
+      }
+
+      // 派发更新
+      notify() {
+        const subs = this.subs.slice();
+        for (var i = 0, l = subs.length; i < l; i++) { 
+          subs[i].update();
+        }
+      }
+    }
+
+    Dep.target = null;
+
+    //  监听的依赖
+    class Watcher {
+      constructor(expOrFn, isRenderWatcher) {
+        this.getter = expOrFn
+        this.get();
+      }
+
+      get() {
+        // 当前执行的watcher
+        Dep.target = this
+        this.getter()
+        Dep.target = null;
+      }
+
+      update() {
+        this.get()
+      }
+    }
+
+
+    class MyVue {
+      constructor(options) {
+        this.options = options;
+        this.initData(options);
+        let el = this.options.id;
+        this.$mount(el);
+      }
+
+      initData(options) {
+        if(!options.data) return;
+        this.data = options.data;
+        // 将数据重置getter，setter方法
+        new Observer(options.data);
+      }
+
+      $mount(el) {
+        let innerHtml = document.querySelector(el).innerHTML;
+        const updateView = _ => {
+          let key = innerHtml.match(/{{(\w+)}}/)[1];
+          document.querySelector(el).innerHTML = this.options.data[key]
+        }
+        new Watcher(updateView, true)
+      }
+    }
+
+    global.MyVue = MyVue
+  }(window))
+  
+  </script>
+  <script>
+    var vm = new MyVue({
+      id: '#app',
+      data: {
+        test: 12
+      }
+    })
+    console.log(vm)
+  </script>
+</body>
+</html>

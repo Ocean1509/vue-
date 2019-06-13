@@ -1050,6 +1050,7 @@
       enumerable: true,
       configurable: true,
       get: function reactiveGetter () {
+        debugger
         var value = getter ? getter.call(obj) : val;
         if (Dep.target) {
           dep.depend();
@@ -1063,7 +1064,6 @@
         return value
       },
       set: function reactiveSetter (newVal) {
-        debugger
         var value = getter ? getter.call(obj) : val;
         /* eslint-disable no-self-compare */
         if (newVal === value || (newVal !== newVal && value !== value)) {
@@ -4100,7 +4100,7 @@
         vm._update(vm._render(), hydrating);
       };
     }
-
+    debugger
     // we set this to vm._watcher inside the watcher's constructor
     // since the watcher's initial patch may call $forceUpdate (e.g. inside child
     // component's mounted hook), which relies on vm._watcher being already defined
