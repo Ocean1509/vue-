@@ -1050,7 +1050,6 @@
       enumerable: true,
       configurable: true,
       get: function reactiveGetter () {
-        debugger
         var value = getter ? getter.call(obj) : val;
         if (Dep.target) {
           dep.depend();
@@ -2302,6 +2301,7 @@
     Ctor,
     tag
   ) {
+    debugger
     // we are only extracting raw values here.
     // validation and default values are handled in the child
     // component itself.
@@ -3264,6 +3264,7 @@
     }
     // extract props
     // props规范性校验
+    debugger
     var propsData = extractPropsFromVNodeData(data, Ctor, tag);
 
     // functional component
@@ -4100,7 +4101,6 @@
         vm._update(vm._render(), hydrating);
       };
     }
-    debugger
     // we set this to vm._watcher inside the watcher's constructor
     // since the watcher's initial patch may call $forceUpdate (e.g. inside child
     // component's mounted hook), which relies on vm._watcher being already defined
@@ -4800,6 +4800,7 @@
       }
 
       if (!isSSR) {
+        // 内部的watcher
         // create internal watcher for the computed property.
         watchers[key] = new Watcher(
           vm,
