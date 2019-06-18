@@ -758,11 +758,13 @@
   var targetStack = [];
 
   function pushTarget (target) {
+    // 将当前的watcher推到targetStack数组中，目的是为了getter方法执行后，可以恢复之前的watcher
     targetStack.push(target);
     Dep.target = target;
   }
 
   function popTarget () {
+    // 恢复原始的wacher
     targetStack.pop();
     Dep.target = targetStack[targetStack.length - 1];
   }
@@ -2301,7 +2303,6 @@
     Ctor,
     tag
   ) {
-    debugger
     // we are only extracting raw values here.
     // validation and default values are handled in the child
     // component itself.
@@ -3264,7 +3265,6 @@
     }
     // extract props
     // props规范性校验
-    debugger
     var propsData = extractPropsFromVNodeData(data, Ctor, tag);
 
     // functional component
@@ -4402,6 +4402,7 @@
    */
   function queueWatcher (watcher) {
     var id = watcher.id;
+    // 保证同一个watcher只执行一次
     if (has[id] == null) {
       has[id] = true;
       if (!flushing) {
@@ -4485,6 +4486,7 @@
         );
       }
     }
+    // lazy为计算属性标志，当watcher为计算watcher时，不会理解执行get方法进行求值
     this.value = this.lazy
       ? undefined
       : this.get();
@@ -4512,6 +4514,7 @@
       if (this.deep) {
         traverse(value);
       }
+      // 把Dep.target恢复到上一个状态，依赖收集过程完成
       popTarget();
       this.cleanupDeps();
     }
@@ -4604,6 +4607,7 @@
    * This only gets called for lazy watchers.
    */
   Watcher.prototype.evaluate = function evaluate () {
+    // 对于计算属性而言 evaluate的作用是执行计算回调
     this.value = this.get();
     this.dirty = false;
   };
@@ -4800,7 +4804,7 @@
       }
 
       if (!isSSR) {
-        // 内部的watcher
+        // computed watcher
         // create internal watcher for the computed property.
         watchers[key] = new Watcher(
           vm,
@@ -4863,6 +4867,7 @@
         if (watcher.dirty) {
           watcher.evaluate();
         }
+        // 当前为渲染watcher
         if (Dep.target) {
           watcher.depend();
         }
@@ -4975,6 +4980,7 @@
       }
       options = options || {};
       options.user = true;
+      debugger
       var watcher = new Watcher(vm, expOrFn, cb, options);
       // 当watch有immediate选项时，立即执行cb方法，即不需要等待属性变化，立刻执行回调。
       if (options.immediate) {

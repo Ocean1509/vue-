@@ -14,45 +14,71 @@
       <p>second</p>
     </test3>
   </div> -->
-  <div id="app">
+  <!-- <div id="app">
     <test :num-d="num"></test>
+  </div> -->
+  <div id="app">
+    <span @click="change">change</span>
+    <div>{{test3}}</div>
   </div>
   <script src="./vue.js"></script>
   <script>
-    debugger
-      var vm = new Vue({
-        el: '#app',
-        data: {
-          num: 123
-        },
-        components: {
-          test: {
-            template: '<div><span>{{test1}}|{{numD}}|{{test2}}</span><span @click="change">修改</span></div>',
-            data () {
-              return {
-                test1: 2
-              }
-            },
-            props: ['numD'],
-            computed: {
-              test2() {
-                return this.test1 + 1;
-              }
-            },
-            watch: {
-              test1() {
-                console.log('----------')
-              }
-            },
-            methods: {
-              change() {
-                this.test1 ++
-              }
-            }
-          }
+    var vm = new Vue({
+      el: '#app',
+      data: {
+        test: true,
+        test1: 1,
+        // test2: 2 
+      },
+      computed: {
+        test3() {
+          return this.test1
         }
-      })
-      console.log(vm)
+      },
+      watch: {
+        test1() {
+          console.log('0000')
+        }
+      },
+      methods: {
+        change() {
+          this.test1 ++
+        }
+      }
+    })
+      // var vm = new Vue({
+      //   el: '#app',
+      //   data: {
+      //     num: 123
+      //   },
+      //   components: {
+      //     test: {
+      //       template: '<div><span>{{test1}}|{{numD}}|{{test2}}</span><span @click="change">修改</span></div>',
+      //       data () {
+      //         return {
+      //           test1: 2
+      //         }
+      //       },
+      //       props: ['numD'],
+      //       computed: {
+      //         test2() {
+      //           return this.test1 + 1;
+      //         }
+      //       },
+      //       watch: {
+      //         test1() {
+      //           console.log('----------')
+      //         }
+      //       },
+      //       methods: {
+      //         change() {
+      //           this.test1 ++
+      //         }
+      //       }
+      //     }
+      //   }
+      // })
+      // console.log(vm)
   </script>
   
 </body>
