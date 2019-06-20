@@ -2301,7 +2301,6 @@
     Ctor,
     tag
   ) {
-    debugger
     // we are only extracting raw values here.
     // validation and default values are handled in the child
     // component itself.
@@ -3264,7 +3263,6 @@
     }
     // extract props
     // props规范性校验
-    debugger
     var propsData = extractPropsFromVNodeData(data, Ctor, tag);
 
     // functional component
@@ -6221,6 +6219,7 @@
     }
 
     function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
+      debugger
       var oldStartIdx = 0;
       var newStartIdx = 0;
       var oldEndIdx = oldCh.length - 1;
@@ -6264,6 +6263,7 @@
           oldEndVnode = oldCh[--oldEndIdx];
           newStartVnode = newCh[++newStartIdx];
         } else {
+          // key的作用: 如果有key会建立一个 key 和 索引的字典，方便搜索key值相同的节点，如果没有字典则需要调用findIdxInOld去搜索
           if (isUndef(oldKeyToIdx)) { oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx); }
           idxInOld = isDef(newStartVnode.key)
             ? oldKeyToIdx[newStartVnode.key]
@@ -6517,6 +6517,7 @@
     }
 
     return function patch (oldVnode, vnode, hydrating, removeOnly) {
+      debugger
       if (isUndef(vnode)) {
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return

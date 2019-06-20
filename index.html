@@ -15,41 +15,44 @@
     </test3>
   </div> -->
   <div id="app">
-    <test :num-d="num"></test>
   </div>
   <script src="./vue.js"></script>
   <script>
-    debugger
       var vm = new Vue({
         el: '#app',
-        data: {
-          num: 123
+        render: function (createElement, context) {
+          return createElement('div', { attrs: { id: 'test' } }, this.arr.map(a => createElement(a.tag, {}, a.text)))
         },
-        components: {
-          test: {
-            template: '<div><span>{{test1}}|{{numD}}|{{test2}}</span><span @click="change">修改</span></div>',
-            data () {
-              return {
-                test1: 2
-              }
-            },
-            props: ['numD'],
-            computed: {
-              test2() {
-                return this.test1 + 1;
-              }
-            },
-            watch: {
-              test1() {
-                console.log('----------')
-              }
-            },
-            methods: {
-              change() {
-                this.test1 ++
-              }
-            }
+        data () {
+          return {
+            arr: [{
+              tag: 'span',
+              text: 1
+            }, {
+              tag: 'strong',
+              text: 2
+            }, {
+              tag: 'i',
+              text: 3
+            }, {
+              tag: 'p',
+              text: 4
+            }]
           }
+        },
+        mounted () {
+          setTimeout(() => {
+            this.arr = [{
+              tag: 'i',
+              text: 3
+            }, {
+              tag: 'span',
+              text: 1
+            }, {
+              tag: 'strong',
+              text: 2
+            }]
+          }, 2000);
         }
       })
       console.log(vm)
