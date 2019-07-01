@@ -1054,6 +1054,7 @@
       get: function reactiveGetter () {
         var value = getter ? getter.call(obj) : val;
         if (Dep.target) {
+          // 为当前watcher添加dep数据
           dep.depend();
           if (childOb) {
             childOb.dep.depend();
