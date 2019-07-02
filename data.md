@@ -16,4 +16,69 @@
 - 4. 手写的```watch```和页面数据渲染监听的```watch```如果同时监听到数据的变化，优先级怎么排。
 - 5. 有了依赖的收集是不是还有依赖的解除，依赖的解除有哪些逻辑的优化
 
-带着这几个问题，我们以不同数据类型的分类
+带着这几个问题，我们分别对不同数据类型的依赖收集和派发更新过程做具体的分析。
+
+### 7.7 data
+##### 7.7.1 依赖收集
+```data```在初始化阶段会实例化一个```Observer```类，这个类的定义如下:(当```data```类型为数组时，我们暂且跳过，等后续再分析。)
+```
+var Observer = function Observer (value) {
+    ···
+    // 将__ob__属性设置成不可枚举属性。外部无法通过遍历获取。
+    def(value, '__ob__', this);
+    // 数组处理
+    if (Array.isArray(value)) {
+        ···
+    } else {
+      // 对象处理
+      this.walk(value);
+    }
+  };
+```
+```__ob__```属性是作为响应式对象的标志，```def```方法确保了该属性是不可枚举属性，即外界无法通过遍历获取该属性值。除了标志响应式对象外，```Observer```类还调用了原型上```walk```方法，对遍历对象上每个属性，进行```getter,setter```的重写
+```
+Observer.prototype.walk = function walk (obj) {
+    // 获取对象所有属性，遍历调用defineReactive$$1进行改写
+    var keys = Object.keys(obj);
+    for (var i = 0; i < keys.length; i++) {
+        defineReactive$$1(obj, keys[i]);
+    }
+};
+```
+```defineReactive$$1```是响应式构建的核心，它会先**实例化一个Dep类，即为每个数据都创建一个依赖的管理**，之后利用```Object.defineProperty```重写```getter,setter```方法。这里我们只分析依赖收集的代码。
+```
+function defineReactive$$1 (obj,key,val,customSetter,shallow) {
+    // 每个数据实例化一个Dep类，创建一个依赖的管理
+    var dep = new Dep();
+
+    var property = Object.getOwnPropertyDescriptor(obj, key);
+    // 属性必须满足可配置
+    if (property && property.configurable === false) {
+      return
+    }
+    // cater for pre-defined getter/setters
+    var getter = property && property.get;
+    var setter = property && property.set;
+    // 这一部分的逻辑是针对深层次的对象，如果对象的属性是一个对象，则
+    var childOb = !shallow && observe(val);
+    Object.defineProperty(obj, key, {
+      enumerable: true,
+      configurable: true,
+      get: function reactiveGetter () {
+        var value = getter ? getter.call(obj) : val;
+        if (Dep.target) {
+          // 为当前watcher添加dep数据
+          dep.depend();
+          if (childOb) {
+            childOb.dep.depend();
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
+        }
+        return value
+      },
+      set: function reactiveSetter (newVal) {}
+    });
+  }
+```
