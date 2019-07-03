@@ -2,8 +2,8 @@
 
 ### 7.5 相关概念
 先简单回顾一下几个重要的概念：
-- 1. Observer类，实例化一个Observer类会通过```Object.defineProperty```对数据的```getter,setter```方法进行改写，在```getter```阶段进行**依赖的收集**,在数据发生更改阶段，触发```setter```方法进行**依赖的更新**
-- 2. watcher类，实例化watcher类相当于创建一个依赖，简单的理解是数据在哪一个地方使用就产生了一个依赖。前面提到的渲染wathcer便是数据在渲染dom时产生的一个依赖。
+- 1. ```Observer```类，实例化一个```Observer```类会通过```Object.defineProperty```对数据的```getter,setter```方法进行改写，在```getter```阶段进行**依赖的收集**,在数据发生更改阶段，触发```setter```方法进行**依赖的更新**
+- 2. ```watcher```类，实例化```watcher```类相当于创建一个依赖，简单的理解是数据在哪一个地方使用就产生了一个依赖。前面提到的渲染wathcer便是数据在渲染dom时产生的一个依赖。
 - 3. Dep类，既然```watcher```理解为每个数据需要监听的依赖，那么对这些依赖的收集和通知则需要另一个类来管理，这个类便是```Dep```,```Dep```需要做的只有两件事，收集依赖和派发更新依赖。
 这是响应式系统构建的三个基本核心概念，也是这一节的基础，如果还没有印象，则需要回顾[深入剖析Vue源码 - 响应式系统构建(上)](https://juejin.im/post/5d072a10518825092c7171c4)一文。
 
@@ -59,11 +59,11 @@ function defineReactive$$1 (obj,key,val,customSetter,shallow) {
     // cater for pre-defined getter/setters
     var getter = property && property.get;
     var setter = property && property.set;
-    // 这一部分的逻辑是针对深层次的对象，如果对象的属性是一个对象，则
+    // 这一部分的逻辑是针对深层次的对象，如果对象的属性是一个对象，则会递归调用实例化Observe类，让其属性值也转换为响应式对象
     var childOb = !shallow && observe(val);
     Object.defineProperty(obj, key, {
       enumerable: true,
-      configurable: true,
+      configurable: true,s
       get: function reactiveGetter () {
         var value = getter ? getter.call(obj) : val;
         if (Dep.target) {
@@ -81,4 +81,88 @@ function defineReactive$$1 (obj,key,val,customSetter,shallow) {
       set: function reactiveSetter (newVal) {}
     });
   }
+```
+主要看```getter```的逻辑，我们知道当```data```中属性值被访问时，会被的```getter```函数拦截，而数据被访问的典型场景是页面渲染时读取并渲染所需要的数据。在[深入剖析Vue源码 - 实例挂载,编译流程](https://juejin.im/post/5ccafd4d51882540d472a90e)的挂载流程中，```$mount```**实例挂载的最后阶段会创建一个渲染```watcher```**,与此同时触发```getter```进入依赖收集阶段。依赖收集阶段总结来说会做下面几件事：
+- 1. **为当前的渲染```watcher```添加拥有的依赖收集器**。
+- 2. **为当前的数据收集需要监听的依赖**
+如何理解这两点？我们看代码中会执行```dep.depend()```,这是```Dep```这个类定义在原型上的方法。
+```
+Dep.prototype.depend = function depend () {
+    if (Dep.target) {
+      Dep.target.addDep(this);
+    }
+  };
+```
+```Dep.target```为当前执行的```watcher```,在当前渲染阶段，```Dep.target```为组件挂载时实例化的渲染```watcher```,因此```depend```方法又会调用当前```watcher```的addDep为```watcher```添加依赖收集器。
+
+```
+Watcher.prototype.addDep = function addDep (dep) {
+    var id = dep.id;
+    if (!this.newDepIds.has(id)) {
+      // newDepIds和newDeps记录watcher拥有的数据
+      this.newDepIds.add(id);
+      this.newDeps.push(dep);
+      // 避免重复添加同一个data收集器
+      if (!this.depIds.has(id)) {
+        dep.addSub(this);
+      }
+    }
+  };
+```
+其中```newDepIds```是具有唯一成员是```Set```数据结构，```newDeps```是数组，他们用来记录当前```watcher```所拥有的数据，这一过程会进行逻辑判断，避免同一数据添加多次。
+```
+Dep.prototype.addSub = function addSub (sub) {
+  //将当前watcher添加到数据依赖收集器中
+    this.subs.push(sub);
+};
+```
+```addSub```为每个数据依赖收集器，添加需要被监听的```watcher```。
+- 3. **遇到属性值为对象时，为该对象的每个值收集依赖**
+- 4. **遇到属性值为数组时，进行特殊处理**，这点放到后面讲。
+
+
+##### 7.7.2 派发更新
+在分析依赖收集的过程中，可能会有不少困惑，为什么要维护这么多的关系？实际在数据更新时，这些关系会起到什么作用？带着疑惑，我们来看看派发更新的过程。
+在数据发生改变时，会执行定义好的```setter```方法，我们先看源码。
+```
+Object.defineProperty(obj,key, {
+  ···
+  set: function reactiveSetter (newVal) {
+      var value = getter ? getter.call(obj) : val;
+      // 新值和旧值相等时，跳出操作
+      if (newVal === value || (newVal !== newVal && value !== value)) {
+        return
+      }
+      ···
+      // 新值为对象时，会为新对象进行依赖收集过程
+      childOb = !shallow && observe(newVal);
+      dep.notify();
+    }
+})
+```
+派发更新阶段会做一下几件事：
+- 1. **数据相等不进行任何派发更新操作**
+- 2. **新值为对象时，会对该值的属性进行依赖收集过程**
+- 3. **通知该数据收集的```watcher```,遍历每个```watcher```进行数据更新**
+这个阶段是调用该数据依赖收集器的```dep.notify```方法进行更新的派发。
+```
+Dep.prototype.notify = function notify () {
+    var subs = this.subs.slice();
+    if (!config.async) {
+      // 根据依赖的id进行排序
+      subs.sort(function (a, b) { return a.id - b.id; });
+    }
+    for (var i = 0, l = subs.length; i < l; i++) {
+      // 遍历每个依赖，进行更新数据操作。
+      subs[i].update();
+    }
+  };
+```
+- 4. **更新时会将每个watcher推到队列中，等待下一个tick到来时取除每个watcher进行run操作**
+
+```
+ Watcher.prototype.update = function update () {
+    ···
+    queueWatcher(this);
+  };
 ```
