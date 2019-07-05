@@ -166,3 +166,102 @@ Dep.prototype.notify = function notify () {
     queueWatcher(this);
   };
 ```
+```queueWatcher```方法的调用，会将数据所收集的依赖依次推到```queue```数组中,数组会在下一个事件循环```'tick'```中根据缓冲结果进行视图更新。而在执行视图更新过程中，难免会因为数据的改变而在渲染模板上添加新的依赖，这样又会执行```queueWatcher```的过程。所以需要有一个标志位来记录是否处于异步更新过程的队列中。这个标志位为```flushing```,当处于异步更新过程时，新增的```watcher```会插入到```queue```中。
+```
+function queueWatcher (watcher) {
+    var id = watcher.id;
+    // 保证同一个watcher只执行一次
+    if (has[id] == null) {
+      has[id] = true;
+      if (!flushing) {
+        queue.push(watcher);
+      } else {
+        var i = queue.length - 1;
+        while (i > index && queue[i].id > watcher.id) {
+          i--;
+        }
+        queue.splice(i + 1, 0, watcher);
+      }
+      ···
+      nextTick(flushSchedulerQueue);
+    }
+  }
+```
+```nextTick```的原理和实现先不讲，概括来说，```nextTick```会缓冲多个数据处理过程，等到下一个事件循环```tick```中再去执行```DOM```操作，**它的原理，本质是利用事件循环的微任务队列实现异步更新**。
+
+
+当下一个```tick```到来时，会执行```flushSchedulerQueue```方法，它会拿到收集的```queue```数组，这是一个```watcher```的集合，之后对依赖进行排序。为什么进行排序呢？源码中注释了三点：
+- 4.1. 组件创建是先父后子，所有组件的更新也是先父后子，因此需要保证父的渲染```watcher```优先于子的渲染```watcher```更新。
+- 4.2. **用户定义watcher对数据的监听，这一阶段会创建一个user watcher,user watcher 和渲染watcher执行也有先后，user watcher优先**，```user watcher```放到后面讲。
+
+- 4.3. 如果一个组件在父组件的 ```watcher``` 执行阶段被销毁，那么它对应的 ```watcher``` 执行都可以被跳过，因此这也是保证父要优先子执行的原因。
+
+
+```
+function flushSchedulerQueue () {
+    currentFlushTimestamp = getNow();
+    flushing = true;
+    var watcher, id;
+    // 对queue的watcher进行排序
+    queue.sort(function (a, b) { return a.id - b.id; });
+    // 循环执行queue.length，为了确保由于渲染时添加新的依赖导致queue的长度不断改变。
+    for (index = 0; index < queue.length; index++) {
+      watcher = queue[index];
+      // 如果watcher定义了before的配置，则优先执行before方法
+      if (watcher.before) {
+        watcher.before();
+      }
+      id = watcher.id;
+      has[id] = null;
+      watcher.run();
+      // in dev build, check and stop circular updates.
+      if (has[id] != null) {
+        circular[id] = (circular[id] || 0) + 1;
+        if (circular[id] > MAX_UPDATE_COUNT) {
+          warn(
+            'You may have an infinite update loop ' + (
+              watcher.user
+                ? ("in watcher with expression \"" + (watcher.expression) + "\"")
+                : "in a component render function."
+            ),
+            watcher.vm
+          );
+          break
+        }
+      }
+    }
+
+    // keep copies of post queues before resetting state
+    var activatedQueue = activatedChildren.slice();
+    var updatedQueue = queue.slice();
+    // 重置恢复状态，清空队列
+    resetSchedulerState();
+
+    // 视图改变后，调用其他钩子
+    callActivatedHooks(activatedQueue);
+    callUpdatedHooks(updatedQueue);
+
+    // devtool hook
+    /* istanbul ignore if */
+    if (devtools && config.devtools) {
+      devtools.emit('flush');
+    }
+  }
+```
+```flushSchedulerQueue```阶段，重要的过程可以总结为四点：
+- 1. ```queue```中的```watcher```进行排序，原因上面已经总结。
+- 2. 遍历```watcher```,如果当前```watcher```有```before```配置，则执行```before```方法，对应分析，在渲染```watcher```实例化时，我们传递了```before```函数，即在下个```tick```更新视图前，会调用```beforeUpdate```生命周期钩子。
+```
+new Watcher(vm, updateComponent, noop, {
+  before: function before () {
+    if (vm._isMounted && !vm._isDestroyed) {
+      callHook(vm, 'beforeUpdate');
+    }
+  }
+}, true /* isRenderWatcher */);
+```
+- 3. 执行```watcher.run```进行修改的操作。
+- 4. 重置恢复状态，这个阶段会将一些流程控制的状态变量恢复为初始值，并清空记录```watcher```的队列。
+
+
+重点看看```watcher.run()```的操作。

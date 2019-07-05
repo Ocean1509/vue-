@@ -4327,6 +4327,7 @@
     // as we run existing watchers
     for (index = 0; index < queue.length; index++) {
       watcher = queue[index];
+      // 如果watcher定义了before的配置，则优先执行before方法
       if (watcher.before) {
         watcher.before();
       }
@@ -4409,6 +4410,7 @@
       if (!flushing) {
         queue.push(watcher);
       } else {
+        debugger
         // if already flushing, splice the watcher based on its id
         // if already past its id, it will be run next immediately.
         var i = queue.length - 1;
@@ -4577,6 +4579,7 @@
    * Will be called by the scheduler.
    */
   Watcher.prototype.run = function run () {
+    debugger
     if (this.active) {
       var value = this.get();
       if (
@@ -4981,7 +4984,6 @@
       }
       options = options || {};
       options.user = true;
-      debugger
       var watcher = new Watcher(vm, expOrFn, cb, options);
       // 当watch有immediate选项时，立即执行cb方法，即不需要等待属性变化，立刻执行回调。
       if (options.immediate) {
@@ -6228,7 +6230,6 @@
     }
 
     function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
-      debugger
       var oldStartIdx = 0;
       var newStartIdx = 0;
       var oldEndIdx = oldCh.length - 1;
@@ -6526,7 +6527,6 @@
     }
 
     return function patch (oldVnode, vnode, hydrating, removeOnly) {
-      debugger
       if (isUndef(vnode)) {
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return

@@ -19,27 +19,29 @@
   </div> -->
   <div id="app">
     <span @click="change">change</span>
-    <div>{{test3}}</div>
+    <div>{{test1}}</div>
+    <!-- <span :class="show = !show">点击</span>{{show? 'up': 'down'}} -->
   </div>
   <script src="./vue.js"></script>
   <script>
     var vm = new Vue({
       el: '#app',
       data: {
-        test: true,
+        // test: true,
         test1: 1,
+        show: true
         // test2: 2 
       },
-      computed: {
-        test3() {
-          return this.test1
-        }
-      },
-      watch: {
-        test1() {
-          console.log('0000')
-        }
-      },
+      // computed: {
+      //   test3() {
+      //     return this.test1
+      //   }
+      // },
+      // watch: {
+      //   test1() {
+      //     console.log('0000')
+      //   }
+      // },
       methods: {
         change() {
           this.test1 ++
