@@ -4410,7 +4410,6 @@
       if (!flushing) {
         queue.push(watcher);
       } else {
-        debugger
         // if already flushing, splice the watcher based on its id
         // if already past its id, it will be run next immediately.
         var i = queue.length - 1;
@@ -4468,6 +4467,7 @@
     this.cb = cb;
     this.id = ++uid$2; // uid for batching
     this.active = true;
+    // computed watcher
     this.dirty = this.lazy; // for lazy watchers
     this.deps = [];
     this.newDeps = [];
@@ -4541,6 +4541,7 @@
   /**
    * Clean up for dependency collection.
    */
+  // 依赖清除的过程
   Watcher.prototype.cleanupDeps = function cleanupDeps () {
     var i = this.deps.length;
     while (i--) {
@@ -4579,7 +4580,6 @@
    * Will be called by the scheduler.
    */
   Watcher.prototype.run = function run () {
-    debugger
     if (this.active) {
       var value = this.get();
       if (
@@ -4871,7 +4871,8 @@
         if (watcher.dirty) {
           watcher.evaluate();
         }
-        // 当前为渲染watcher
+        // 
+        debugger
         if (Dep.target) {
           watcher.depend();
         }

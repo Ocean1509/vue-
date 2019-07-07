@@ -19,7 +19,7 @@
   </div> -->
   <div id="app">
     <span @click="change">change</span>
-    <div>{{test1}}</div>
+    <div>{{test3}}</div>
     <!-- <span :class="show = !show">点击</span>{{show? 'up': 'down'}} -->
   </div>
   <script src="./vue.js"></script>
@@ -32,11 +32,11 @@
         show: true
         // test2: 2 
       },
-      // computed: {
-      //   test3() {
-      //     return this.test1
-      //   }
-      // },
+      computed: {
+        test3() {
+          return this.test1
+        }
+      },
       // watch: {
       //   test1() {
       //     console.log('0000')

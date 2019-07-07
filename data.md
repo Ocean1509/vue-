@@ -265,3 +265,225 @@ new Watcher(vm, updateComponent, noop, {
 
 
 重点看看```watcher.run()```的操作。
+```
+Watcher.prototype.run = function run () {
+    if (this.active) {
+      var value = this.get();
+      if ( value !== this.value || isObject(value) || this.deep ) {
+        // 设置新值
+        var oldValue = this.value;
+        this.value = value;
+        // 针对user watcher，暂时不分析
+        if (this.user) {
+          try {
+            this.cb.call(this.vm, value, oldValue);
+          } catch (e) {
+            handleError(e, this.vm, ("callback for watcher \"" + (this.expression) + "\""));
+          }
+        } else {
+          this.cb.call(this.vm, value, oldValue);
+        }
+      }
+    }
+  };
+```
+首先会执行```watcher.prototype.get```的方法，得到数据变化后的当前值，之后会对新值做判断，如果满足新旧值不等，新值是对象类型，```deep```模式的任一条件，则执行```cb```,```cb```为实例化```watcher```时传入的回调。
+
+在分析```get```方法前，回头看看```watcher```构造函数的几个属性定义
+```
+var watcher = function Watcher(
+  vm, // 组件实例
+  expOrFn, // 执行函数
+  cb, // 回调
+  options, // 配置
+  isRenderWatcher // 是否为渲染watcher
+) {
+  this.vm = vm;
+    if (isRenderWatcher) {
+      vm._watcher = this;
+    }
+    vm._watchers.push(this);
+    // options
+    if (options) {
+      this.deep = !!options.deep;
+      this.user = !!options.user;
+      this.lazy = !!options.lazy;
+      this.sync = !!options.sync;
+      this.before = options.before;
+    } else {
+      this.deep = this.user = this.lazy = this.sync = false;
+    }
+    this.cb = cb;
+    this.id = ++uid$2; // uid for batching
+    this.active = true;
+    this.dirty = this.lazy; // for lazy watchers
+    this.deps = [];
+    this.newDeps = [];
+    this.depIds = new _Set();
+    this.newDepIds = new _Set();
+    this.expression = expOrFn.toString();
+    // parse expression for getter
+    if (typeof expOrFn === 'function') {
+      this.getter = expOrFn;
+    } else {
+      this.getter = parsePath(expOrFn);
+      if (!this.getter) {
+        this.getter = noop;
+        warn(
+          "Failed watching path: \"" + expOrFn + "\" " +
+          'Watcher only accepts simple dot-delimited paths. ' +
+          'For full control, use a function instead.',
+          vm
+        );
+      }
+    }
+    // lazy为计算属性标志，当watcher为计算watcher时，不会理解执行get方法进行求值
+    this.value = this.lazy
+      ? undefined
+      : this.get();
+  
+}
+```
+方法```get```的定义如下：
+```
+Watcher.prototype.get = function get () {
+    pushTarget(this);
+    var value;
+    var vm = this.vm;
+    try {
+      value = this.getter.call(vm, vm);
+    } catch (e) {
+     ···
+    } finally {
+      ···
+      // 把Dep.target恢复到上一个状态，依赖收集过程完成
+      popTarget();
+      this.cleanupDeps();
+    }
+    return value
+  };
+```
+```get```方法会执行```this.getter```进行求值，在当前渲染```watcher```的条件下,```getter```会执行视图更新的操作。这一阶段会**根据数据变化重新渲染页面组件**
+```
+new Watcher(vm, updateComponent, noop, { before: () => {} }, true);
+
+updateComponent = function () {
+  vm._update(vm._render(), hydrating);
+};
+```
+
+执行完```getter```方法后，最后一步会进行依赖的清除，也就是```cleanupDeps```的过程。
+
+> 列举一个场景： 我们经常会使用```v-if```来进行模板的切换，奇幻过程中会执行不同的模板渲染，如果A模板监听a数据，B模板监听b数据，当渲染模板B时，如果不进行旧依赖的清除，在B模板的场景下，a数据的变化同样会引起依赖的重新渲染更新，这会造成性能的浪费。因此旧依赖的清除在优化阶段是有必要。
+
+```
+// 依赖清除的过程
+  Watcher.prototype.cleanupDeps = function cleanupDeps () {
+    var i = this.deps.length;
+    while (i--) {
+      var dep = this.deps[i];
+      if (!this.newDepIds.has(dep.id)) {
+        dep.removeSub(this);
+      }
+    }
+    var tmp = this.depIds;
+    this.depIds = this.newDepIds;
+    this.newDepIds = tmp;
+    this.newDepIds.clear();
+    tmp = this.deps;
+    this.deps = this.newDeps;
+    this.newDeps = tmp;
+    this.newDeps.length = 0;
+  };
+```
+
+把上面分析的总结成两个点
+- 5. **执行run操作会执行getter方法也就是重新计算新值，针对渲染watcher而言，会重新执行updateComponent进行视图更新**
+- 6. **重新计算getter后，会进行依赖的清除**
+
+至此```data```的依赖收集和派发更新介绍完毕。
+
+### 7.8 computed
+##### 7.8.1 依赖收集
+```computed```的初始化过程，**会遍历```computed```的每一个属性值，并为没有给属性实例化一个```computed watcher```**
+```
+watchers[key] = new Watcher(
+  vm,
+  getter || noop,
+  noop,
+  computedWatcherOptions
+);
+// computed watcher的标志是，lazy属性为true
+var computedWatcherOptions = { lazy: true };
+```
+
+与```data```相似，```computed```的初始化在创建```watcher```之后也需要将```computed```的每一个属性值转化为响应式数据。具体的定义如下：
+```
+function defineComputed (target,key,userDef) {
+  // 非服务端渲染会对getter进行缓存
+  var shouldCache = !isServerRendering();
+  if (typeof userDef === 'function') {
+    // 
+    sharedPropertyDefinition.get = shouldCache
+      ? createComputedGetter(key)
+      : createGetterInvoker(userDef);
+    sharedPropertyDefinition.set = noop;
+  } else {
+    sharedPropertyDefinition.get = userDef.get
+      ? shouldCache && userDef.cache !== false
+        ? createComputedGetter(key)
+        : createGetterInvoker(userDef.get)
+      : noop;
+    sharedPropertyDefinition.set = userDef.set || noop;
+  }
+  if (sharedPropertyDefinition.set === noop) {
+    sharedPropertyDefinition.set = function () {
+      warn(
+        ("Computed property \"" + key + "\" was assigned to but it has no setter."),
+        this
+      );
+    };
+  }
+  Object.defineProperty(target, key, sharedPropertyDefinition);
+}
+```
+在非服务端渲染的情形，计算属性的计算结果会被缓存，缓存的意义在于，**只有在相关响应式数据发生变化时，```computed```才会重新求值，其余情况多次访问计算属性的值都会返回之前计算的结果，这就是缓存的优化**，```computed```属性执行两种写法，一种是函数的写法，另一种是对象的写法，其中对象的写法需要提供```getter```和```setter```方法。
+
+当访问到```computed```属性时，会触发```getter```方法进行依赖收集，看看```createComputedGetter```的实现。
+```
+function createComputedGetter (key) {
+    return function computedGetter () {
+      var watcher = this._computedWatchers && this._computedWatchers[key];
+      if (watcher) {
+        if (watcher.dirty) {
+          watcher.evaluate();
+        }
+        if (Dep.target) {
+          watcher.depend();
+        }
+        return watcher.value
+      }
+    }
+  }
+```
+```createComputedGetter```返回的函数在执行过程中会先拿到属性的```computed watcher```,```watcher```的```dirty```是标志该```watcher```为```computed watcher```，所以会执行```evaluate```方法。
+```
+Watcher.prototype.evaluate = function evaluate () {
+    // 对于计算属性而言 evaluate的作用是执行计算回调
+    this.value = this.get();
+    this.dirty = false;
+  };
+```
+```get```方法前面介绍过，会调用实例化```watcher```时传递的执行函数，在```computer watcher```的场景下，执行函数是计算属性的计算函数，他可以是一个函数，也可以是对象的```getter```方法。
+
+> 列举一个场景避免和data的处理脱钩，```computed```在计算阶段，如果访问到```data```数据的其他属性值，会触发```data```数据的```getter```方法进行依赖收集，根据前面分析，```data```的```Dep```收集器会将当前```watcher```作为依赖进行收集，而这个```watcher```就是```computed watcher```，并且会为当前的```watcher```添加依赖收集器```Dep```
+
+
+回到计算执行函数的```this.get()```方法，```getter```执行完毕后同样会进行依赖的清除，原理和目的参考```data```阶段的分析。
+
+
+```get```执行完毕后会进入```watcher.depend```进行依赖的收集。收集过程和```data```一致,为利用数据的依赖收集器```Dep```为当前的需要计算的属性添加需要监听的```watcher```。
+
+##### 7.8.2 派发更新
+
+计算属性的变化，往往是由于数据所依赖的数据发生改变导致的。
