@@ -82,3 +82,252 @@ Watcher.prototype.evaluate = function evaluate () {
 ##### 7.8.2 派发更新
 
 计算属性的变化，往往是由于数据所依赖的数据发生改变导致的。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+数组处理
+
+为类型为数组的属性添加```__ob__```属性
+
+
+
+
+
+
+
+### 9.数组检测
+在[深入剖析Vue源码 - 数据代理，关联子父组件](https://juejin.im/post/5ca44c6151882543fb5ac95f)这一节中，已经详细介绍了```vue```中数据代理的技术:```Object.defineProperty```,有了```Object.defineProperty```方法，我们可以方便的利用存取描述符中的```getter/setter```来进行数据的监听,在```get,set```钩子中分别做不同的操作，达到数据拦截的目的。然而```Object.defineProperty```的```get,set```方法只能检测到对象属性的变化，对于数组的变化(例如插入删除数组元素等操作)，```Object.defineProperty```却无法检测,这也是利用```Object.defineProperty```进行数据监控的缺陷，虽然```es6```中的```proxy```可以完美解决这一问题，但毕竟有兼容性问题，所以我们还需要研究```Vue```中如何检测数组的变化。
+
+##### 9.1 数组方法的重写
+数组的改变，不能再通过数据的```setter```方法去监听数组的变化，所以只能通过调用数组方法后额外进行数据的处理。```Vue```为所有数组操作的方法重新改写了定义。
+```
+var arrayProto = Array.prototype;
+// 新建一个继承于Array的对象
+var arrayMethods = Object.create(arrayProto);
+
+// 数组拥有的方法
+var methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+];
+```
+```arrayMethods```是基于原始Array类为原型创建的一个对象类，因此也拥有数组的所有方法，接下来对新数组类的方法进行改写。
+```
+methodsToPatch.forEach(function (method) {
+  // 缓冲原始数组的方法
+  var original = arrayProto[method];
+  // 利用Object.defineProperty对方法的执行进行改写
+  def(arrayMethods, method, function mutator () {});
+});
+
+function def (obj, key, val, enumerable) {
+    Object.defineProperty(obj, key, {
+      value: val,
+      enumerable: !!enumerable,
+      writable: true,
+      configurable: true
+    });
+  }
+
+```
+
+当调用新对象的数组方法时，会调用```mutator```方法,具体方法的执行内容，我们放到数组的派发更新时介绍。
+
+
+新建了一个定制后的数组类```arrayMethods```,如何在调用数组方法的时候指向这个新的类，这是下一步的重点。
+
+回到数据初始化，也就是```initData```阶段,上一篇内容花了大篇幅介绍过，数据初始化会为```data```数据创建一个```Observer```类，当时我们只讲述了```Observer```类会为每个非数组的属性进行数据拦截，重新定义```getter,setter```,而对数组的分析处理则留下来了空白。现在再回头看看对数组的处理。
+
+```
+var Observer = function Observer (value) {
+  this.value = value;
+  this.dep = new Dep();
+  this.vmCount = 0;
+  // 将__ob__属性设置成不可枚举属性。外部无法通过遍历获取。
+  def(value, '__ob__', this);
+  // 数组处理
+  if (Array.isArray(value)) {
+    if (hasProto) {
+      protoAugment(value, arrayMethods);
+    } else {
+      copyAugment(value, arrayMethods, arrayKeys);
+    }
+    this.observeArray(value);
+  } else {
+  // 对象处理
+    this.walk(value);
+  }
+}
+```
+数组的处理会根据```hasProto```的判断执行```protoAugment, protoAugment```过程，```hasProto```用来判断当前环境下是否支持```__proto__```属性。
+
+```
+var hasProto = '__proto__' in {};
+```
+
+当支持```__proto__```时，执行```protoAugment```讲当前数组的原型指向新的数组类```arrayMethods```,不支持```__proto__```时，则通过代理设置，在访问数组方法时代理访问新数组类中的数组方法。
+```
+//直接通过原型指向的方式
+
+function protoAugment (target, src) {
+  target.__proto__ = src;
+}
+
+// 通过数据代理的方式
+function copyAugment (target, src, keys) {
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    def(target, key, src[key]);
+  }
+}
+```
+有了这两步的处理，接下来在我们调用```push, unshift```等数组的方法时，会执行```arrayMethods```类的方法。这也是数组改变进行依赖收集和派发更新的核心。
+
+
+##### 9.2 依赖收集
+由于数据初始化阶段会利用```Object.definePrototype```进行数据访问的改写，数组的访问同样使用，因此访问到的数据是数组时，会被```getter```拦截处理，这里针对数组进行特殊处理。
+```
+function defineReactive() {
+  ···
+  var childOb = !shallow && observe(val);
+
+  Object.defineProperty(obj, key, {
+        enumerable: true,
+        configurable: true,
+        get: function reactiveGetter () {
+          var value = getter ? getter.call(obj) : val;
+          if (Dep.target) {
+            dep.depend();
+            if (childOb) {
+              childOb.dep.depend();
+              if (Array.isArray(value)) {
+                dependArray(value);
+              }
+            }
+          }
+          return value
+        },
+        set() {}
+}
+ 
+```
+```childOb```是标志属性值是否为基础类型的标志，```observe```遇到基本类型数据直接返回，不做任何处理，遇到对象和数组则会递归调用实例化```Observer```，最终返回```Observer```实例。而实例化```Observer```又回到之前的老流程：添加```__ob__```属性，如果遇到数组则进行原型重指向，遇到对象则定义```getter,setter```，这一过程前面分析过，就不再阐述。
+
+
+在访问到数组时，由于```childOb```的存在，会执行```childOb.dep.depend();```进行依赖收集，该```Observer```实例的```dep```属性会收集当前的```watcher```作为依赖保存，这就是依赖收集的过程。
+
+我们可以通过截图看最终依赖收集的结果。其中Observer
+
+> 图
+
+
+##### 9.3 派发更新
+当调用数组的方法改变数组元素时，数据的```setter```方法是无法拦截的，所以我们唯一可以拦截的过程就是调用数组方法的时候，前面介绍过，数组方法的调用会代理到新类```arrayMethods```的方法中,而```arrayMethods```的数组方法是进行重写过的。具体我们看他的定义。
+
+```
+ methodsToPatch.forEach(function (method) {
+    var original = arrayProto[method];
+    def(arrayMethods, method, function mutator () {
+      var args = [], len = arguments.length;
+      while ( len-- ) args[ len ] = arguments[ len ];
+      // 执行原数组方法
+      var result = original.apply(this, args);
+      var ob = this.__ob__;
+      var inserted;
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break
+        case 'splice':
+          inserted = args.slice(2);
+          break
+      }
+      if (inserted) { ob.observeArray(inserted); }
+      // notify change
+      ob.dep.notify();
+      return result
+    });
+  });
+
+```
+```mutator```是重写的数组方法，首先会调用原始的数组方法进行运算，这保证了原始数组类型的方法一致性，```args```保存了数组方法调用传递的参数。之后取出数组的```__ob__```也就是之前保存的```Observer```实例，调用```ob.dep.notify();```进行依赖的派发更新，前面知道了。```Observer```实例的```dep```是```Dep```的实例，他收集了需要监听的```watcher```依赖，而```notify```会对依赖进行重新计算，并更新。具体看```Dep.prototype.notify = function notify () {}```函数的分析，这里也不重复赘述。
+
+回到代码中，```inserted```变量用来标志数组是否是增加了元素，如果增加的元素不是原始类型，而是数组对象类型，则需要触发```observeArray```方法，对每个元素进行依赖收集。
+
+总的来说。数组的改变不会触发```setter```进行依赖更新，所以```Vue```创建了一个新的数组类，重写了数组的方法，将数组方法指向了新的数组类。同时在返回到数组时依旧触发```getter```进行依赖收集，在更改数组时，触发数组新方法运算，并进行依赖的派发。
+
+现在我们回过头看看Vue的官方文档对于数组检测时的注意事项：
+> Vue 不能检测以下数组的变动
+  当你利用索引直接设置一个数组项时，例如：vm.items[indexOfItem] = newValue
+  当你修改数组的长度时，例如：vm.items.length = newLength
+
+这些方式修改的数组从源码角度看，并不会触发派发更新的过程。 
+
+### 10 对象检测异常
+我们在实际开发中经常遇到一种场景，对象```test: { a: 1 }```要添加一个属性```b```,这时如果我们使用```test.b = 2```的方式去添加，这个过程```Vue```是无法检测到的，理由也很简单。我们在对对象进行依赖收集的时候，会为对象的每个属性都进行收集依赖，而直接通过```test.b```添加的新属性并没有依赖收集的过程，因此当数据改变时也不会进行依赖的更新。
+
+```Vue```中为了解决这一问题，提供了```Vue.set(object, propertyName, value)```和```vm.$set(object, propertyName, value)```方式，我们看具体怎么完成新属性的依赖收集过程。
+```
+Vue.set = set
+function set (target, key, val) {
+    //target必须为非空对象
+    if (isUndef(target) || isPrimitive(target)
+    ) {
+      warn(("Cannot set reactive property on undefined, null, or primitive value: " + ((target))));
+    }
+    // 数组场景，调用重写的splice方法，对新添加属性收集依赖。
+    if (Array.isArray(target) && isValidArrayIndex(key)) {
+      target.length = Math.max(target.length, key);
+      target.splice(key, 1, val);
+      return val
+    }
+    // 新增对象的属性存在时，
+    if (key in target && !(key in Object.prototype)) {
+      target[key] = val;
+      return val
+    }
+    var ob = (target).__ob__;
+    if (target._isVue || (ob && ob.vmCount)) {
+      warn(
+        'Avoid adding reactive properties to a Vue instance or its root $data ' +
+        'at runtime - declare it upfront in the data option.'
+      );
+      return val
+    }
+    if (!ob) {
+      target[key] = val;
+      return val
+    }
+    defineReactive$$1(ob.value, key, val);
+    ob.dep.notify();
+    return val
+  }
+```
+按照分支分为不同的四个处理逻辑：
+- 1. 目标对象必须为非空的对象，可以是数组，否则抛出异常。
+- 2. 如果目标对象是数组时，调用数组的```splice```方法，而前面分析数组检测时，遇到数组新增元素的场景，会调用```ob.observeArray(inserted)```对数组新增的元素收集依赖。
+- 3. 新增的属性值在原对象中已经存在，则手动访问新的属性值，这一过程会触发依赖收集。
+- 4. 

@@ -1,141 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>模拟响应式系统</title>
 </head>
+
 <body>
   <div id="app">{{test}}</div>
   <script>
-  (function(global) {
-    const defineReactive = (obj, key) => {
+    (function (global) {
+      const defineReactive = (obj, key) => {
 
-      const dep = new Dep();
+        const dep = new Dep();
 
-      const property = Object.getOwnPropertyDescriptor(obj);
-      let val = obj[key]
-      if(property && property.configurable === false) return;
-      Object.defineProperty(obj, key, {
-        configurable: true,
-        enumerable: true,
-        get() {
-          // 做依赖的收集
-          if(Dep.target) {
-            dep.depend()
+        const property = Object.getOwnPropertyDescriptor(obj);
+        let val = obj[key]
+        if (property && property.configurable === false) return;
+        var childOb = observe(val);
+        Object.defineProperty(obj, key, {
+          configurable: true,
+          enumerable: true,
+          get() {
+            // 做依赖的收集
+            if (Dep.target) {
+              dep.depend()
+            }
+            if (childOb) {
+              childOb.deps.depend();
+            }
+            return val
+          },
+          set(nval) {
+            if (nval === val) return
+            // 派发更新
+            val = nval
+            dep.notify();
           }
-          return val
-        },
-        set(nval) {
-          if(nval === val) return
-          // 派发更新
-          val = nval
-          dep.notify();
-        }
+        })
+
+      }
+
+      const originArray = Array.prototype;
+
+      const newArray = Object.create(originArray);
+
+      const methodsToPatch = [
+        'push', 'unshift'
+      ]
+
+
+      methodsToPatch.forEach(method => {
+        Object.defineProperty(newArray, method, {
+          value() {
+            var original = originArray[method];
+            var result = original.apply(this, arguments);
+            this.__ob__.deps.notify()
+            return result;
+          },
+          enumerable: true,
+          writable: true,
+          configurable: true
+        })
       })
 
-    }
-
-    class Observer {
-      constructor(data) {
-        this.walk(data)
+      const protoAugment = (value, src) => {
+        value.__proto__ = src;
       }
 
-      walk(obj) {
-        const keys = Object.keys(obj);
-        for(let i = 0;i< keys.length; i++) {
-          defineReactive(obj, keys[i])
+      const observe = (val) => {
+        if (val === null || typeof val !== 'object') {
+          return
+        }
+        return new Observer(val);
+      }
+      // 代理
+      const Proxy = (target, sourceKey, key) => {
+        Object.defineProperty(target, key, {
+          get() {
+            return target[sourceKey][key]
+          },
+          set() {
+            target[sourceKey][key] = val;
+          },
+          configurable: true,
+          enumerable: true
+        })
+      }
+
+      class Observer {
+        constructor(data) {
+          this.value = data;
+          this.deps = new Dep();
+
+          //
+          Object.defineProperty(data, '__ob__', {
+            value: this,
+            enumerable: false,
+            writable: true,
+            configurable: true
+          })
+
+          if (Array.isArray(data)) {
+            protoAugment(data, newArray);
+            this.observeArray(data);
+          } else {
+            this.walk(data)
+          }
+        }
+
+        walk(obj) {
+          const keys = Object.keys(obj);
+          for (let i = 0; i < keys.length; i++) {
+            defineReactive(obj, keys[i])
+          }
+        }
+
+        observeArray(value) {
+          for (let i = 0; i < value.length; i++) {
+            observe(value[i])
+          }
         }
       }
-    }
 
 
 
-    let uid = 0;
-    class Dep {
-      
-      constructor() {
-        this.id = uid++;
-        this.subs = []
-      }
 
-      // 依赖收集
-      depend() {
-        if(Dep.target) {
-          // Dep.target是当前的watcher
-          this.subs.push(Dep.target)
+      let uid = 0;
+      class Dep {
+
+        constructor() {
+          this.id = uid++;
+          this.subs = []
+        }
+
+        // 依赖收集
+        depend() {
+          if (Dep.target) {
+            // Dep.target是当前的watcher
+            this.subs.push(Dep.target)
+          }
+        }
+
+        // 派发更新
+        notify() {
+          const subs = this.subs.slice();
+          for (var i = 0, l = subs.length; i < l; i++) {
+            subs[i].update();
+          }
         }
       }
 
-      // 派发更新
-      notify() {
-        const subs = this.subs.slice();
-        for (var i = 0, l = subs.length; i < l; i++) { 
-          subs[i].update();
+      Dep.target = null;
+
+      //  监听的依赖
+      class Watcher {
+        constructor(expOrFn, isRenderWatcher) {
+          this.getter = expOrFn
+          this.get();
+        }
+
+        get() {
+          // 当前执行的watcher
+          Dep.target = this
+          this.getter()
+          Dep.target = null;
+        }
+
+        update() {
+          this.get()
         }
       }
-    }
 
-    Dep.target = null;
-
-    //  监听的依赖
-    class Watcher {
-      constructor(expOrFn, isRenderWatcher) {
-        this.getter = expOrFn
-        this.get();
-      }
-
-      get() {
-        // 当前执行的watcher
-        Dep.target = this
-        this.getter()
-        Dep.target = null;
-      }
-
-      update() {
-        this.get()
-      }
-    }
-
-
-    class MyVue {
-      constructor(options) {
-        this.options = options;
-        this.initData(options);
-        let el = this.options.id;
-        this.$mount(el);
-      }
-
-      initData(options) {
-        if(!options.data) return;
-        this.data = options.data;
-        // 将数据重置getter，setter方法
-        new Observer(options.data);
-      }
-
-      $mount(el) {
-        let innerHtml = document.querySelector(el).innerHTML;
-        const updateView = _ => {
-          let key = innerHtml.match(/{{(\w+)}}/)[1];
-          document.querySelector(el).innerHTML = this.options.data[key]
+      class MyVue {
+        constructor(options) {
+          this.options = options;
+          this.initData(options);
+          let el = this.options.id;
+          this.$mount(el);
         }
-        new Watcher(updateView, true)
-      }
-    }
 
-    global.MyVue = MyVue
-  }(window))
-  
+        initData(options) {
+          if (!options.data) return;
+          this.data = options.data;
+          let key
+          for (key in this.data) {
+            Proxy(this, "data", key);
+          }
+          // 将数据重置getter，setter方法
+          new Observer(options.data);
+        }
+
+        $mount(el) {
+          let innerHtml = document.querySelector(el).innerHTML;
+          const updateView = _ => {
+            let key = innerHtml.match(/{{(\w+)}}/)[1];
+            document.querySelector(el).innerHTML = this.options.data[key]
+          }
+          new Watcher(updateView, true)
+        }
+      }
+
+
+
+      global.MyVue = MyVue
+    }(window))
   </script>
   <script>
     var vm = new MyVue({
       id: '#app',
       data: {
-        test: 12
+        test: [3, 43, 3]
       }
     })
     console.log(vm)
   </script>
 </body>
+
 </html>

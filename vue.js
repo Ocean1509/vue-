@@ -977,6 +977,7 @@
    * Augment a target Object or Array by intercepting
    * the prototype chain using __proto__
    */
+  //直接通过原型指向的方式
   function protoAugment (target, src) {
     /* eslint-disable no-proto */
     target.__proto__ = src;
@@ -988,6 +989,7 @@
    * hidden properties.
    */
   /* istanbul ignore next */
+  // 通过数据代理的方式
   function copyAugment (target, src, keys) {
     for (var i = 0, l = keys.length; i < l; i++) {
       var key = keys[i];
@@ -1066,6 +1068,7 @@
         return value
       },
       set: function reactiveSetter (newVal) {
+        debugger
         var value = getter ? getter.call(obj) : val;
         /* eslint-disable no-self-compare */
         if (newVal === value || (newVal !== newVal && value !== value)) {
@@ -1094,6 +1097,7 @@
    * already exist.
    */
   function set (target, key, val) {
+    debugger
     if (isUndef(target) || isPrimitive(target)
     ) {
       warn(("Cannot set reactive property on undefined, null, or primitive value: " + ((target))));
@@ -4872,7 +4876,6 @@
           watcher.evaluate();
         }
         // 
-        debugger
         if (Dep.target) {
           watcher.depend();
         }
