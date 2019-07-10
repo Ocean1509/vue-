@@ -304,11 +304,12 @@ function set (target, key, val) {
       target.splice(key, 1, val);
       return val
     }
-    // 新增对象的属性存在时，
+    // 新增对象的属性存在时，直接返回新属性，触发依赖收集
     if (key in target && !(key in Object.prototype)) {
       target[key] = val;
       return val
     }
+    // 拿到目标源的Observer 实例
     var ob = (target).__ob__;
     if (target._isVue || (ob && ob.vmCount)) {
       warn(
@@ -317,10 +318,12 @@ function set (target, key, val) {
       );
       return val
     }
+    // 目标源对象本身不是一个响应式对象，则不需要处理
     if (!ob) {
       target[key] = val;
       return val
     }
+    // 手动调用defineReactive，为新属性设置getter,setter
     defineReactive$$1(ob.value, key, val);
     ob.dep.notify();
     return val
@@ -330,4 +333,4 @@ function set (target, key, val) {
 - 1. 目标对象必须为非空的对象，可以是数组，否则抛出异常。
 - 2. 如果目标对象是数组时，调用数组的```splice```方法，而前面分析数组检测时，遇到数组新增元素的场景，会调用```ob.observeArray(inserted)```对数组新增的元素收集依赖。
 - 3. 新增的属性值在原对象中已经存在，则手动访问新的属性值，这一过程会触发依赖收集。
-- 4. 
+- 4. 手动定义新属性的```getter,setter```方法，并通过```notify```触发依赖更新。

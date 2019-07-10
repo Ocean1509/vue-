@@ -1098,19 +1098,23 @@
    */
   function set (target, key, val) {
     debugger
+    //target必须为非空对象
     if (isUndef(target) || isPrimitive(target)
     ) {
       warn(("Cannot set reactive property on undefined, null, or primitive value: " + ((target))));
     }
+    // 数组场景，调用重写的splice方法，对新添加属性收集依赖。
     if (Array.isArray(target) && isValidArrayIndex(key)) {
       target.length = Math.max(target.length, key);
       target.splice(key, 1, val);
       return val
     }
+    // 新增对象的属性存在时，直接返回新属性，触发依赖收集
     if (key in target && !(key in Object.prototype)) {
       target[key] = val;
       return val
     }
+    // 拿到目标源的Observer 实例
     var ob = (target).__ob__;
     if (target._isVue || (ob && ob.vmCount)) {
       warn(
@@ -1119,6 +1123,7 @@
       );
       return val
     }
+    // 目标源对象本身不是一个响应式对象，则不需要处理
     if (!ob) {
       target[key] = val;
       return val
