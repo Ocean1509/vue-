@@ -1068,7 +1068,6 @@
         return value
       },
       set: function reactiveSetter (newVal) {
-        debugger
         var value = getter ? getter.call(obj) : val;
         /* eslint-disable no-self-compare */
         if (newVal === value || (newVal !== newVal && value !== value)) {
@@ -1097,7 +1096,6 @@
    * already exist.
    */
   function set (target, key, val) {
-    debugger
     //target必须为非空对象
     if (isUndef(target) || isPrimitive(target)
     ) {
@@ -1946,8 +1944,10 @@
   var pending = false;
 
   function flushCallbacks () {
+    debugger
     pending = false;
     var copies = callbacks.slice(0);
+    // 取出callbacks数组的每一个任务，执行任务
     callbacks.length = 0;
     for (var i = 0; i < copies.length; i++) {
       copies[i]();
@@ -4580,6 +4580,7 @@
     } else if (this.sync) {
       this.run();
     } else {
+      debugger
       queueWatcher(this);
     }
   };

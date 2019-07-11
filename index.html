@@ -19,7 +19,8 @@
   </div> -->
   <div id="app">
     <span @click="change">change</span>
-    <div>{{obj.b}}</div>
+    <!-- <div>{{obj.b}}</div> -->
+    <div>{{test}}</div>
     <!-- <span :class="show = !show">点击</span>{{show? 'up': 'down'}} -->
   </div>
   <script src="./vue.js"></script>
@@ -31,10 +32,11 @@
         // test1: 1,
         // show: true,
         // arr: [1,2,3]，
-        obj: {
-          a: 123
-        },
-        arr: [3,4]
+        // obj: {
+        //   a: 123
+        // },
+        // arr: [3,4]
+        test: 1
         // test2: 2 
       },
       computed: {
@@ -52,8 +54,11 @@
           // this.obj.b = 123213;
           // console.log(this.obj)
           // Vue.set(this.obj, 'b', 3333);
-          Vue.set(this.arr, 1, 234)
-          console.log(this.arr)
+          // Vue.set(this.arr, 1, 234)
+          // console.log(this.arr)
+          for(var i =0;i<8;i++) {
+            this.test++
+          }
         }
       }
     })
