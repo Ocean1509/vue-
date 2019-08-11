@@ -9,6 +9,7 @@
 </head>
 
 <body>
+  <input type="text" value="12321">
   <script>
     // function A() {
     //   this.a = 2;
@@ -33,20 +34,20 @@
     // })
 
     // obj.push(222)
-    var obj = {
-      a: 1
-    }
-    var nObj = new Proxy(obj, {
-      has(target, key) {
-        console.log(target) // { a: 1 }
-        console.log(key) // a
-        return true
-      }
-    })
+    // var obj = {
+    //   a: 1
+    // }
+    // var nObj = new Proxy(obj, {
+    //   has(target, key) {
+    //     console.log(target) // { a: 1 }
+    //     console.log(key) // a
+    //     return true
+    //   }
+    // })
 
-    with(nObj) {
-      a = 2
-    }
+    // with(nObj) {
+    //   a = 2
+    // }
   </script>
 </body>
 
