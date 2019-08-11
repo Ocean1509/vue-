@@ -1,419 +1,417 @@
->为了深入的介绍响应式系统的内部实现原理，我们花了一整节的篇幅介绍了数据如何初始化成为响应式对象的过程，其中包括```data, computed,props```等数据。上一节的介绍以构建思路为主，对细节化繁为简，并在文章的后半部分在保留源码结构的前提下构建了一个以```data```为数据的响应式系统。有了这些铺垫，这节将深入分析响应式系统的核心。
+> 上一节，我们深入分析了以```data```为数据创建响应式系统的过程，并对其中依赖收集和派发更新的过程进行了详细的分析。然而在使用和分析过程中依然存在或多或少的问题，这一节我们将针对这些问题展开分析，这也将作为响应式系统分析的完结篇。
 
-### 7.5 相关概念
-先简单回顾一下几个重要的概念：
-- 1. ```Observer```类，实例化一个```Observer```类会通过```Object.defineProperty```对数据的```getter,setter```方法进行改写，在```getter```阶段进行**依赖的收集**,在数据发生更改阶段，触发```setter```方法进行**依赖的更新**
-- 2. ```watcher```类，实例化```watcher```类相当于创建一个依赖，简单的理解是数据在哪一个地方使用就产生了一个依赖。前面提到的渲染wathcer便是数据在渲染dom时产生的一个依赖。
-- 3. Dep类，既然```watcher```理解为每个数据需要监听的依赖，那么对这些依赖的收集和通知则需要另一个类来管理，这个类便是```Dep```,```Dep```需要做的只有两件事，收集依赖和派发更新依赖。
-这是响应式系统构建的三个基本核心概念，也是这一节的基础，如果还没有印象，则需要回顾[深入剖析Vue源码 - 响应式系统构建(上)](https://juejin.im/post/5d072a10518825092c7171c4)一文。
+### 7.8.数组检测
+在[深入剖析Vue源码 - 数据代理，关联子父组件](https://juejin.im/post/5ca44c6151882543fb5ac95f)这一节中，已经详细介绍了```vue```数据代理的技术是利用了```Object.defineProperty```,有了```Object.defineProperty```方法，我们可以方便的利用存取描述符中的```getter/setter```来进行数据的监听,在```get,set```钩子中分别做不同的操作，达到数据拦截的目的。然而```Object.defineProperty```的```get,set```方法只能检测到对象属性的变化，对于数组的变化(例如插入删除数组元素等操作)，```Object.defineProperty```却无法检测,这也是利用```Object.defineProperty```进行数据监控的缺陷，虽然```es6```中的```proxy```可以完美解决这一问题，但毕竟有兼容性问题，所以我们还需要研究```Vue```中如何对数组进行监听检测。
 
-
-### 7.6 问题思考
-接下来我会带着以下几个疑问开始分析：
-- 1. 实例化```Dep```发生在什么时候。前面已经知道，```Dep```是作为依赖的容器，那么这个容器什么时候产生的呢？
-- 2. ```Dep```收集了什么类型的依赖？即```watcher```作为依赖的分类有哪些，分别是什么场景，以及区别在哪里？
-- 3. ```Observer```这个类具体对```getter,setter```方法做了哪些事情
-- 4. 手写的```watch```和页面数据渲染监听的```watch```如果同时监听到数据的变化，优先级怎么排。
-- 5. 有了依赖的收集是不是还有依赖的解除，依赖的解除有哪些逻辑的优化
-
-带着这几个问题，我们分别对不同数据类型的依赖收集和派发更新过程做具体的分析。
-
-### 7.7 data
-##### 7.7.1 依赖收集
-```data```在初始化阶段会实例化一个```Observer```类，这个类的定义如下:(当```data```类型为数组时，我们暂且跳过，等后续再分析。)
+##### 7.8.1 数组方法的重写
+数组的改变不能再通过数据的```setter```方法去监听数组的变化，所以只能通过调用数组方法后对数据进行额外的处理。```Vue```为所有数组操作的方法重新改写了定义。
 ```
-var Observer = function Observer (value) {
-    ···
-    // 将__ob__属性设置成不可枚举属性。外部无法通过遍历获取。
-    def(value, '__ob__', this);
-    // 数组处理
-    if (Array.isArray(value)) {
-        ···
-    } else {
-      // 对象处理
-      this.walk(value);
-    }
-  };
-```
-```__ob__```属性是作为响应式对象的标志，```def```方法确保了该属性是不可枚举属性，即外界无法通过遍历获取该属性值。除了标志响应式对象外，```Observer```类还调用了原型上```walk```方法，对遍历对象上每个属性，进行```getter,setter```的重写
-```
-Observer.prototype.walk = function walk (obj) {
-    // 获取对象所有属性，遍历调用defineReactive$$1进行改写
-    var keys = Object.keys(obj);
-    for (var i = 0; i < keys.length; i++) {
-        defineReactive$$1(obj, keys[i]);
-    }
-};
-```
-```defineReactive$$1```是响应式构建的核心，它会先**实例化一个Dep类，即为每个数据都创建一个依赖的管理**，之后利用```Object.defineProperty```重写```getter,setter```方法。这里我们只分析依赖收集的代码。
-```
-function defineReactive$$1 (obj,key,val,customSetter,shallow) {
-    // 每个数据实例化一个Dep类，创建一个依赖的管理
-    var dep = new Dep();
+var arrayProto = Array.prototype;
+// 新建一个继承于Array的对象
+var arrayMethods = Object.create(arrayProto);
 
-    var property = Object.getOwnPropertyDescriptor(obj, key);
-    // 属性必须满足可配置
-    if (property && property.configurable === false) {
-      return
-    }
-    // cater for pre-defined getter/setters
-    var getter = property && property.get;
-    var setter = property && property.set;
-    // 这一部分的逻辑是针对深层次的对象，如果对象的属性是一个对象，则会递归调用实例化Observe类，让其属性值也转换为响应式对象
-    var childOb = !shallow && observe(val);
+// 数组拥有的方法
+var methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+];
+```
+```arrayMethods```是基于原始```Array```类为原型继承的一个对象类，因此也拥有数组的所有方法，接下来对新数组类的方法进行改写。
+```
+methodsToPatch.forEach(function (method) {
+  // 缓冲原始数组的方法
+  var original = arrayProto[method];
+  // 利用Object.defineProperty对方法的执行进行改写
+  def(arrayMethods, method, function mutator () {});
+});
+
+function def (obj, key, val, enumerable) {
     Object.defineProperty(obj, key, {
-      enumerable: true,
-      configurable: true,s
-      get: function reactiveGetter () {
-        var value = getter ? getter.call(obj) : val;
-        if (Dep.target) {
-          // 为当前watcher添加dep数据
-          dep.depend();
-          if (childOb) {
-            childOb.dep.depend();
-            if (Array.isArray(value)) {
-              dependArray(value);
-            }
-          }
-        }
-        return value
-      },
-      set: function reactiveSetter (newVal) {}
+      value: val,
+      enumerable: !!enumerable,
+      writable: true,
+      configurable: true
     });
   }
-```
-主要看```getter```的逻辑，我们知道当```data```中属性值被访问时，会被的```getter```函数拦截，而数据被访问的典型场景是页面渲染时读取并渲染所需要的数据。在[深入剖析Vue源码 - 实例挂载,编译流程](https://juejin.im/post/5ccafd4d51882540d472a90e)的挂载流程中，```$mount```**实例挂载的最后阶段会创建一个渲染```watcher```**,与此同时触发```getter```进入依赖收集阶段。依赖收集阶段总结来说会做下面几件事：
-- 1. **为当前的渲染```watcher```添加拥有的依赖收集器**。
-- 2. **为当前的数据收集需要监听的依赖**
-如何理解这两点？我们看代码中会执行```dep.depend()```,这是```Dep```这个类定义在原型上的方法。
-```
-Dep.prototype.depend = function depend () {
-    if (Dep.target) {
-      Dep.target.addDep(this);
-    }
-  };
-```
-```Dep.target```为当前执行的```watcher```,在当前渲染阶段，```Dep.target```为组件挂载时实例化的渲染```watcher```,因此```depend```方法又会调用当前```watcher```的addDep为```watcher```添加依赖收集器。
 
 ```
-Watcher.prototype.addDep = function addDep (dep) {
-    var id = dep.id;
-    if (!this.newDepIds.has(id)) {
-      // newDepIds和newDeps记录watcher拥有的数据
-      this.newDepIds.add(id);
-      this.newDeps.push(dep);
-      // 避免重复添加同一个data收集器
-      if (!this.depIds.has(id)) {
-        dep.addSub(this);
-      }
-    }
-  };
-```
-其中```newDepIds```是具有唯一成员是```Set```数据结构，```newDeps```是数组，他们用来记录当前```watcher```所拥有的数据，这一过程会进行逻辑判断，避免同一数据添加多次。
-```
-Dep.prototype.addSub = function addSub (sub) {
-  //将当前watcher添加到数据依赖收集器中
-    this.subs.push(sub);
-};
-```
-```addSub```为每个数据依赖收集器，添加需要被监听的```watcher```。
-- 3. **遇到属性值为对象时，为该对象的每个值收集依赖**
-- 4. **遇到属性值为数组时，进行特殊处理**，这点放到后面讲。
+
+当调用新对象的数组方法时，会调用```mutator```方法,具体执行内容，我们放到数组的派发更新中介绍。
 
 
-##### 7.7.2 派发更新
-在分析依赖收集的过程中，可能会有不少困惑，为什么要维护这么多的关系？实际在数据更新时，这些关系会起到什么作用？带着疑惑，我们来看看派发更新的过程。
-在数据发生改变时，会执行定义好的```setter```方法，我们先看源码。
-```
-Object.defineProperty(obj,key, {
-  ···
-  set: function reactiveSetter (newVal) {
-      var value = getter ? getter.call(obj) : val;
-      // 新值和旧值相等时，跳出操作
-      if (newVal === value || (newVal !== newVal && value !== value)) {
-        return
-      }
-      ···
-      // 新值为对象时，会为新对象进行依赖收集过程
-      childOb = !shallow && observe(newVal);
-      dep.notify();
-    }
-})
-```
-派发更新阶段会做一下几件事：
-- 1. **数据相等不进行任何派发更新操作**
-- 2. **新值为对象时，会对该值的属性进行依赖收集过程**
-- 3. **通知该数据收集的```watcher```,遍历每个```watcher```进行数据更新**
-这个阶段是调用该数据依赖收集器的```dep.notify```方法进行更新的派发。
-```
-Dep.prototype.notify = function notify () {
-    var subs = this.subs.slice();
-    if (!config.async) {
-      // 根据依赖的id进行排序
-      subs.sort(function (a, b) { return a.id - b.id; });
-    }
-    for (var i = 0, l = subs.length; i < l; i++) {
-      // 遍历每个依赖，进行更新数据操作。
-      subs[i].update();
-    }
-  };
-```
-- 4. **更新时会将每个watcher推到队列中，等待下一个tick到来时取除每个watcher进行run操作**
+新建了一个定制化的数组类```arrayMethods```后,如何在调用数组方法时指向这个新的类，这是下一步的重点。
+
+回到数据初始化，也就是```initData```阶段,上一篇内容花了大篇幅介绍过，数据初始化会为```data```数据创建一个```Observer```类，当时我们只讲述了```Observer```类会为每个非数组的属性进行数据拦截，重新定义```getter,setter```,而对数组的分析处理则留下来了空白。现在再回头看看对数组的处理。
 
 ```
- Watcher.prototype.update = function update () {
-    ···
-    queueWatcher(this);
-  };
-```
-```queueWatcher```方法的调用，会将数据所收集的依赖依次推到```queue```数组中,数组会在下一个事件循环```'tick'```中根据缓冲结果进行视图更新。而在执行视图更新过程中，难免会因为数据的改变而在渲染模板上添加新的依赖，这样又会执行```queueWatcher```的过程。所以需要有一个标志位来记录是否处于异步更新过程的队列中。这个标志位为```flushing```,当处于异步更新过程时，新增的```watcher```会插入到```queue```中。
-```
-function queueWatcher (watcher) {
-    var id = watcher.id;
-    // 保证同一个watcher只执行一次
-    if (has[id] == null) {
-      has[id] = true;
-      if (!flushing) {
-        queue.push(watcher);
-      } else {
-        var i = queue.length - 1;
-        while (i > index && queue[i].id > watcher.id) {
-          i--;
-        }
-        queue.splice(i + 1, 0, watcher);
-      }
-      ···
-      nextTick(flushSchedulerQueue);
-    }
-  }
-```
-```nextTick```的原理和实现先不讲，概括来说，```nextTick```会缓冲多个数据处理过程，等到下一个事件循环```tick```中再去执行```DOM```操作，**它的原理，本质是利用事件循环的微任务队列实现异步更新**。
-
-
-当下一个```tick```到来时，会执行```flushSchedulerQueue```方法，它会拿到收集的```queue```数组，这是一个```watcher```的集合，之后对依赖进行排序。为什么进行排序呢？源码中注释了三点：
-- 4.1. 组件创建是先父后子，所有组件的更新也是先父后子，因此需要保证父的渲染```watcher```优先于子的渲染```watcher```更新。
-- 4.2. **用户定义watcher对数据的监听，这一阶段会创建一个user watcher,user watcher 和渲染watcher执行也有先后，user watcher优先**，```user watcher```放到后面讲。
-
-- 4.3. 如果一个组件在父组件的 ```watcher``` 执行阶段被销毁，那么它对应的 ```watcher``` 执行都可以被跳过，因此这也是保证父要优先子执行的原因。
-
-
-```
-function flushSchedulerQueue () {
-    currentFlushTimestamp = getNow();
-    flushing = true;
-    var watcher, id;
-    // 对queue的watcher进行排序
-    queue.sort(function (a, b) { return a.id - b.id; });
-    // 循环执行queue.length，为了确保由于渲染时添加新的依赖导致queue的长度不断改变。
-    for (index = 0; index < queue.length; index++) {
-      watcher = queue[index];
-      // 如果watcher定义了before的配置，则优先执行before方法
-      if (watcher.before) {
-        watcher.before();
-      }
-      id = watcher.id;
-      has[id] = null;
-      watcher.run();
-      // in dev build, check and stop circular updates.
-      if (has[id] != null) {
-        circular[id] = (circular[id] || 0) + 1;
-        if (circular[id] > MAX_UPDATE_COUNT) {
-          warn(
-            'You may have an infinite update loop ' + (
-              watcher.user
-                ? ("in watcher with expression \"" + (watcher.expression) + "\"")
-                : "in a component render function."
-            ),
-            watcher.vm
-          );
-          break
-        }
-      }
-    }
-
-    // keep copies of post queues before resetting state
-    var activatedQueue = activatedChildren.slice();
-    var updatedQueue = queue.slice();
-    // 重置恢复状态，清空队列
-    resetSchedulerState();
-
-    // 视图改变后，调用其他钩子
-    callActivatedHooks(activatedQueue);
-    callUpdatedHooks(updatedQueue);
-
-    // devtool hook
-    /* istanbul ignore if */
-    if (devtools && config.devtools) {
-      devtools.emit('flush');
-    }
-  }
-```
-```flushSchedulerQueue```阶段，重要的过程可以总结为四点：
-- 1. ```queue```中的```watcher```进行排序，原因上面已经总结。
-- 2. 遍历```watcher```,如果当前```watcher```有```before```配置，则执行```before```方法，对应分析，在渲染```watcher```实例化时，我们传递了```before```函数，即在下个```tick```更新视图前，会调用```beforeUpdate```生命周期钩子。
-```
-new Watcher(vm, updateComponent, noop, {
-  before: function before () {
-    if (vm._isMounted && !vm._isDestroyed) {
-      callHook(vm, 'beforeUpdate');
-    }
-  }
-}, true /* isRenderWatcher */);
-```
-- 3. 执行```watcher.run```进行修改的操作。
-- 4. 重置恢复状态，这个阶段会将一些流程控制的状态变量恢复为初始值，并清空记录```watcher```的队列。
-
-
-重点看看```watcher.run()```的操作。
-```
-Watcher.prototype.run = function run () {
-    if (this.active) {
-      var value = this.get();
-      if ( value !== this.value || isObject(value) || this.deep ) {
-        // 设置新值
-        var oldValue = this.value;
-        this.value = value;
-        // 针对user watcher，暂时不分析
-        if (this.user) {
-          try {
-            this.cb.call(this.vm, value, oldValue);
-          } catch (e) {
-            handleError(e, this.vm, ("callback for watcher \"" + (this.expression) + "\""));
-          }
-        } else {
-          this.cb.call(this.vm, value, oldValue);
-        }
-      }
-    }
-  };
-```
-首先会执行```watcher.prototype.get```的方法，得到数据变化后的当前值，之后会对新值做判断，如果满足新旧值不等，新值是对象类型，```deep```模式的任一条件，则执行```cb```,```cb```为实例化```watcher```时传入的回调。
-
-在分析```get```方法前，回头看看```watcher```构造函数的几个属性定义
-```
-var watcher = function Watcher(
-  vm, // 组件实例
-  expOrFn, // 执行函数
-  cb, // 回调
-  options, // 配置
-  isRenderWatcher // 是否为渲染watcher
-) {
-  this.vm = vm;
-    if (isRenderWatcher) {
-      vm._watcher = this;
-    }
-    vm._watchers.push(this);
-    // options
-    if (options) {
-      this.deep = !!options.deep;
-      this.user = !!options.user;
-      this.lazy = !!options.lazy;
-      this.sync = !!options.sync;
-      this.before = options.before;
+var Observer = function Observer (value) {
+  this.value = value;
+  this.dep = new Dep();
+  this.vmCount = 0;
+  // 将__ob__属性设置成不可枚举属性。外部无法通过遍历获取。
+  def(value, '__ob__', this);
+  // 数组处理
+  if (Array.isArray(value)) {
+    if (hasProto) {
+      protoAugment(value, arrayMethods);
     } else {
-      this.deep = this.user = this.lazy = this.sync = false;
+      copyAugment(value, arrayMethods, arrayKeys);
     }
-    this.cb = cb;
-    this.id = ++uid$2; // uid for batching
-    this.active = true;
-    this.dirty = this.lazy; // for lazy watchers
-    this.deps = [];
-    this.newDeps = [];
-    this.depIds = new _Set();
-    this.newDepIds = new _Set();
-    this.expression = expOrFn.toString();
-    // parse expression for getter
-    if (typeof expOrFn === 'function') {
-      this.getter = expOrFn;
-    } else {
-      this.getter = parsePath(expOrFn);
-      if (!this.getter) {
-        this.getter = noop;
-        warn(
-          "Failed watching path: \"" + expOrFn + "\" " +
-          'Watcher only accepts simple dot-delimited paths. ' +
-          'For full control, use a function instead.',
-          vm
-        );
-      }
-    }
-    // lazy为计算属性标志，当watcher为计算watcher时，不会理解执行get方法进行求值
-    this.value = this.lazy
-      ? undefined
-      : this.get();
-  
+    this.observeArray(value);
+  } else {
+  // 对象处理
+    this.walk(value);
+  }
 }
 ```
-方法```get```的定义如下：
-```
-Watcher.prototype.get = function get () {
-    pushTarget(this);
-    var value;
-    var vm = this.vm;
-    try {
-      value = this.getter.call(vm, vm);
-    } catch (e) {
-     ···
-    } finally {
-      ···
-      // 把Dep.target恢复到上一个状态，依赖收集过程完成
-      popTarget();
-      this.cleanupDeps();
-    }
-    return value
-  };
-```
-```get```方法会执行```this.getter```进行求值，在当前渲染```watcher```的条件下,```getter```会执行视图更新的操作。这一阶段会**根据数据变化重新渲染页面组件**
-```
-new Watcher(vm, updateComponent, noop, { before: () => {} }, true);
-
-updateComponent = function () {
-  vm._update(vm._render(), hydrating);
-};
-```
-
-执行完```getter```方法后，最后一步会进行依赖的清除，也就是```cleanupDeps```的过程。
-
-> 列举一个场景： 我们经常会使用```v-if```来进行模板的切换，奇幻过程中会执行不同的模板渲染，如果A模板监听a数据，B模板监听b数据，当渲染模板B时，如果不进行旧依赖的清除，在B模板的场景下，a数据的变化同样会引起依赖的重新渲染更新，这会造成性能的浪费。因此旧依赖的清除在优化阶段是有必要。
+数组的处理会根据```hasProto```的判断执行```protoAugment, copyAugment```过程，```hasProto```用来判断当前环境下是否支持```__proto__```属性。
 
 ```
-// 依赖清除的过程
-  Watcher.prototype.cleanupDeps = function cleanupDeps () {
-    var i = this.deps.length;
-    while (i--) {
-      var dep = this.deps[i];
-      if (!this.newDepIds.has(dep.id)) {
-        dep.removeSub(this);
+var hasProto = '__proto__' in {};
+```
+
+当支持```__proto__```时，执行```protoAugment```会将当前数组的原型指向新的数组类```arrayMethods```,不支持```__proto__```时，则通过代理设置，在访问数组方法时代理访问新数组类中的数组方法。
+```
+//直接通过原型指向的方式
+
+function protoAugment (target, src) {
+  target.__proto__ = src;
+}
+
+// 通过数据代理的方式
+function copyAugment (target, src, keys) {
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    def(target, key, src[key]);
+  }
+}
+```
+有了这两步的处理，接下来我们在实例内部调用```push, unshift```等数组的方法时，会执行```arrayMethods```类的方法。这也是数组进行依赖收集和派发更新的核心。
+
+
+##### 7.8.2 依赖收集
+由于数据初始化阶段会利用```Object.definePrototype```进行数据访问的改写，数组的访问同样适用，因此当访问到的数据是数组时，会被```getter```拦截处理，这里针对数组进行特殊处理。
+```
+function defineReactive() {
+  ···
+  var childOb = !shallow && observe(val);
+
+  Object.defineProperty(obj, key, {
+        enumerable: true,
+        configurable: true,
+        get: function reactiveGetter () {
+          var value = getter ? getter.call(obj) : val;
+          if (Dep.target) {
+            dep.depend();
+            if (childOb) {
+              childOb.dep.depend();
+              if (Array.isArray(value)) {
+                dependArray(value);
+              }
+            }
+          }
+          return value
+        },
+        set() {}
+}
+ 
+```
+```childOb```是标志属性值是否为基础类型的标志，```observe```遇到基本类型数据直接返回，不做任何处理，遇到对象和数组则会递归实例化```Observer```，最终返回```Observer```实例。而实例化```Observer```又回到之前的老流程：
+  **添加```__ob__```属性，如果遇到数组则进行原型重指向，遇到对象则定义```getter,setter```，这一过程前面分析过，就不再阐述。**
+
+
+在访问到数组时，由于```childOb```的存在，会执行```childOb.dep.depend();```进行依赖收集，该```Observer```实例的```dep```属性会收集当前的```watcher```作为依赖保存，这就是依赖收集的过程。
+
+我们可以通过截图看最终依赖收集的结果。其中Observer
+
+> 图
+
+
+##### 7.8.3 派发更新
+当调用数组的方法改变数组元素时，数据的```setter```方法是无法拦截的，所以我们唯一可以拦截的过程就是调用数组方法的时候，前面介绍过，数组方法的调用会代理到新类```arrayMethods```的方法中,而```arrayMethods```的数组方法是进行重写过的。具体我们看他的定义。
+
+```
+ methodsToPatch.forEach(function (method) {
+    var original = arrayProto[method];
+    def(arrayMethods, method, function mutator () {
+      var args = [], len = arguments.length;
+      while ( len-- ) args[ len ] = arguments[ len ];
+      // 执行原数组方法
+      var result = original.apply(this, args);
+      var ob = this.__ob__;
+      var inserted;
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break
+        case 'splice':
+          inserted = args.slice(2);
+          break
       }
+      if (inserted) { ob.observeArray(inserted); }
+      // notify change
+      ob.dep.notify();
+      return result
+    });
+  });
+
+```
+```mutator```是重写的数组方法，首先会调用原始的数组方法进行运算，这保证了与原始数组类型的方法一致性，```args```保存了数组方法调用传递的参数。之后取出数组的```__ob__```也就是之前保存的```Observer```实例，调用```ob.dep.notify();```进行依赖的派发更新，前面知道了。```Observer```实例的```dep```是```Dep```的实例，他收集了需要监听的```watcher```依赖，而```notify```会对依赖进行重新计算并更新。具体看```Dep.prototype.notify = function notify () {}```函数的分析，这里也不重复赘述。
+
+回到代码中，```inserted```变量用来标志数组是否是增加了元素，如果增加的元素不是原始类型，而是数组对象类型，则需要触发```observeArray```方法，对每个元素进行依赖收集。
+
+**总的来说。数组的改变不会触发```setter```进行依赖更新，所以```Vue```创建了一个新的数组类，重写了数组的方法，将数组方法指向了新的数组类。同时在返回到数组时依旧触发```getter```进行依赖收集，在更改数组时，触发数组新方法运算，并进行依赖的派发。**
+
+现在我们回过头看看Vue的官方文档对于数组检测时的注意事项：
+> Vue 不能检测以下数组的变动
+  当你利用索引直接设置一个数组项时，例如：vm.items[indexOfItem] = newValue
+  当你修改数组的长度时，例如：vm.items.length = newLength
+
+有了上诉的分析，数组的这些设置方式确实不会触发派发更新的过程。 
+
+
+
+### 7.9 对象检测异常
+我们在实际开发中经常遇到一种场景，对象```test: { a: 1 }```要添加一个属性```b```,这时如果我们使用```test.b = 2```的方式去添加，这个过程```Vue```是无法检测到的，理由也很简单。我们在对对象进行依赖收集的时候，会为对象的每个属性都进行收集依赖，而直接通过```test.b```添加的新属性并没有依赖收集的过程，因此当之后数据```b```发证改变时也不会进行依赖的更新。
+
+```Vue```中为了解决这一问题，提供了```Vue.set(object, propertyName, value)```和```vm.$set(object, propertyName, value)```方法，我们看具体怎么完成新属性的依赖收集过程。
+```
+Vue.set = set
+function set (target, key, val) {
+    //target必须为非空对象
+    if (isUndef(target) || isPrimitive(target)
+    ) {
+      warn(("Cannot set reactive property on undefined, null, or primitive value: " + ((target))));
     }
-    var tmp = this.depIds;
-    this.depIds = this.newDepIds;
-    this.newDepIds = tmp;
-    this.newDepIds.clear();
-    tmp = this.deps;
-    this.deps = this.newDeps;
-    this.newDeps = tmp;
-    this.newDeps.length = 0;
-  };
+    // 数组场景，调用重写的splice方法，对新添加属性收集依赖。
+    if (Array.isArray(target) && isValidArrayIndex(key)) {
+      target.length = Math.max(target.length, key);
+      target.splice(key, 1, val);
+      return val
+    }
+    // 新增对象的属性存在时，直接返回新属性，触发依赖收集
+    if (key in target && !(key in Object.prototype)) {
+      target[key] = val;
+      return val
+    }
+    // 拿到目标源的Observer 实例
+    var ob = (target).__ob__;
+    if (target._isVue || (ob && ob.vmCount)) {
+      warn(
+        'Avoid adding reactive properties to a Vue instance or its root $data ' +
+        'at runtime - declare it upfront in the data option.'
+      );
+      return val
+    }
+    // 目标源对象本身不是一个响应式对象，则不需要处理
+    if (!ob) {
+      target[key] = val;
+      return val
+    }
+    // 手动调用defineReactive，为新属性设置getter,setter
+    defineReactive$$1(ob.value, key, val);
+    ob.dep.notify();
+    return val
+  }
+```
+按照分支分为不同的四个处理逻辑：
+- 1. 目标对象必须为非空的对象，可以是数组，否则抛出异常。
+- 2. 如果目标对象是数组时，调用数组的```splice```方法，而前面分析数组检测时，遇到数组新增元素的场景，会调用```ob.observeArray(inserted)```对数组新增的元素收集依赖。
+- 3. 新增的属性值在原对象中已经存在，则手动访问新的属性值，这一过程会触发依赖收集。
+- 4. 手动定义新属性的```getter,setter```方法，并通过```notify```触发依赖更新。
+
+
+### 7.10 nextTick
+
+在上一节的内容中，我们说到数据修改时会触发```setter```方法进行依赖的派发更新，而更新时会将每个```watcher```推到队列中，等待下一个```tick```到来时再执行```DOM```的渲染更新操作。这个就是异步更新的过程。为了说明异步更新的概念，需要牵扯到浏览器的事件循环机制和最优的渲染时机问题。由于这不是文章的主线，我只用简单的总结表述。
+
+##### 7.10.1 事件循环机制
+
+- 1. 完整的事件循环机制需要了解两种异步队列：```macro-task```和```micro-task```
+- 2. ```macro-task```常见的有 ```setTimeout, setInterval, setImmediate, script脚本, I/O操作，UI渲染```
+- 3. ```micro-task```常见的有 ```promise, process.nextTick, MutationObserver```等
+- 4. 完整事件循环流程为：
+  - 4.1 ```micro-task```空，```macro-task```队列只有```script```脚本，推出```macro-task```的```script```任务执行，脚本执行期间产生的```macro-task，micro-task```推到对应的队列中
+  - 4.2 执行全部```macro-task```里的微任务事件
+  - 4.3 执行```DOM```操作，渲染更新页面
+  - 4.4 执行```web worker```等相关任务
+  - 4.5 循环，取出```macro-task```中一个宏任务事件执行，重复4的操作。
+
+
+  从上面的流程中我们可以发现，最好的渲染过程发生在微任务队列的执行过程中，此时他离页面渲染过程最近，因此我们可以借助微任务队列来实现异步更新，它可以让复杂批量的运算操作运行在JS层面，而视图的渲染只关心最终的结果，这大大降低了性能的损耗。
+  
+  举一个这一做法好处的例子： 
+    由于```Vue```是数据驱动视图更新渲染，如果我们在一个操作中重复对一个响应式数据进行计算，例如 在一个循环中执行```this.num ++ ```一千次，由于响应式系统的存在，数据变化触发```setter```，```setter```触发依赖派发更新，更新调用```run```进行视图的重新渲染。这一次循环，视图渲染要执行一千次，很明显这是很浪费性能的，我们只需要关注最后第一千次在界面上更新的结果而已。所以利用异步更新显得格外重要。
+
+##### 7.10.2 基本实现
+
+  ```Vue```用一个```queue```收集依赖的执行，在下次微任务执行的时候统一执行```queue```中```Watcher```的```run```操作,与此同时，相同```id```的```watcher```不会重复添加到```queue```中,因此也不会重复执行多次的视图渲染。我们看```nextTick```的实现。
+
+```
+// 原型上定义的方法
+Vue.prototype.$nextTick = function (fn) {
+  return nextTick(fn, this)
+};
+// 构造函数上定义的方法
+Vue.nextTick = nextTick;
+
+// 实际的定义
+var callbacks = [];
+function nextTick (cb, ctx) {
+    var _resolve;
+    // callbacks是维护微任务的数组。
+    callbacks.push(function () {
+      if (cb) {
+        try {
+          cb.call(ctx);
+        } catch (e) {
+          handleError(e, ctx, 'nextTick');
+        }
+      } else if (_resolve) {
+        _resolve(ctx);
+      }
+    });
+    if (!pending) {
+      pending = true;
+      // 将维护的队列推到微任务队列中维护
+      timerFunc();
+    }
+    // nextTick没有传递参数，且浏览器支持Promise,则返回一个promise对象
+    if (!cb && typeof Promise !== 'undefined') {
+      return new Promise(function (resolve) {
+        _resolve = resolve;
+      })
+    }
+  }
 ```
 
-把上面分析的总结成两个点
-- 5. **执行run操作会执行getter方法也就是重新计算新值，针对渲染watcher而言，会重新执行updateComponent进行视图更新**
-- 6. **重新计算getter后，会进行依赖的清除**
+```nextTick```定义为一个函数，使用方式为```Vue.nextTick( [callback, context] )```,当```callback```经过```nextTick```封装后，```callback```会在下一个```tick```中执行调用。从实现上，```callbacks```是一个维护了需要在下一个```tick```中执行的任务的队列，它的每个元素都是需要执行的函数。```pending```是判断是否在等待执行微任务队列的标志。而```timerFunc```是真正将任务队列推到微任务队列中的函数。我们看```timerFunc```的实现。
 
-至此```data```的依赖收集和派发更新介绍完毕。
+- 1. 如果浏览器执行```Promise```,那么默认以```Promsie```将执行过程推到微任务队列中。
+```
+var timerFunc;
+
+if (typeof Promise !== 'undefined' && isNative(Promise)) {
+  var p = Promise.resolve();
+  timerFunc = function () {
+    p.then(flushCallbacks);
+    // 手机端的兼容代码
+    if (isIOS) { setTimeout(noop); }
+  };
+  // 使用微任务队列的标志
+  isUsingMicroTask = true;
+}
+```
+```flushCallbacks```是异步更新的函数，他会取出callbacks数组的每一个任务，执行任务，具体定义如下：
+```
+function flushCallbacks () {
+  pending = false;
+  var copies = callbacks.slice(0);
+  // 取出callbacks数组的每一个任务，执行任务
+  callbacks.length = 0;
+  for (var i = 0; i < copies.length; i++) {
+    copies[i]();
+  }
+}
+```
+
+- 2. 不支持```promise```,支持```MutataionObserver```
+```
+else if (!isIE && typeof MutationObserver !== 'undefined' && (
+    isNative(MutationObserver) ||
+    // PhantomJS and iOS 7.x
+    MutationObserver.toString() === '[object MutationObserverConstructor]'
+  )) {
+    var counter = 1;
+    var observer = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(String(counter));
+    observer.observe(textNode, {
+      characterData: true
+    });
+    timerFunc = function () {
+      counter = (counter + 1) % 2;
+      textNode.data = String(counter);
+    };
+    isUsingMicroTask = true;
+  }
+```
+
+- 3. 支持```setImmediate```
+```
+ else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+    // Fallback to setImmediate.
+    // Techinically it leverages the (macro) task queue,
+    // but it is still a better choice than setTimeout.
+    timerFunc = function () {
+      setImmediate(flushCallbacks);
+    };
+  }
+```
+- 4. 所有微任务类型的方法都不适合，则使用宏任务队列
+```
+else {
+  timerFunc = function () {
+    setTimeout(flushCallbacks, 0);
+  };
+}
+```
+
+当```nextTick```不传递任何参数时，可以作为一个```promise```用，例如：
+```
+nextTick().then(() => {})
+```
+
+##### 7.10.3 使用场景
+说了这么多原理性的东西，回过头来看看```nextTick```的使用场景，由于异步更新的原理，我们在某一时间改变的数据并不会触发视图的更新，而是需要等下一个```tick```到来时才会更新视图，下面是一个典型场景：
+
+```
+<input v-if="show" type="text" ref="myInput">
+
+// js
+data() {
+  show: false
+},
+mounted() {
+  this.show = true;
+  this.$refs.myInput.focus();// 报错
+}
+```
+数据改变时，视图并不会同时改变，因此需要使用```nextTick```
+```
+mounted() {
+  this.show = true;
+  this.$nextTick(function() {
+    this.$refs.myInput.focus();// 正常
+  })
+}
+```
+
+
+**讲完响应式系统几个关键的问题，接下来，回到分析响应式系统的主线，上一节分析的是```data```,后面补上```computed,watch```的响应式构建过程。**
 
 ### 7.8 computed
 ##### 7.8.1 依赖收集
-```computed```的初始化过程，**会遍历```computed```的每一个属性值，并为没有给属性实例化一个```computed watcher```**
+```computed```的初始化过程，**会遍历```computed```的每一个属性值，并为每一个属性实例化一个```computed watcher```**
 ```
-watchers[key] = new Watcher(
-  vm,
-  getter || noop,
-  noop,
-  computedWatcherOptions
-);
-// computed watcher的标志是，lazy属性为true
+function initComputed() {
+  ···
+  for(var key in computed) {
+    watchers[key] = new Watcher(
+        vm,
+        getter || noop,
+        noop,
+        computedWatcherOptions
+      );
+  }
+}
+
+// computed watcher的标志，lazy属性为true
 var computedWatcherOptions = { lazy: true };
 ```
 
@@ -486,4 +484,16 @@ Watcher.prototype.evaluate = function evaluate () {
 
 ##### 7.8.2 派发更新
 
-计算属性的变化，往往是由于数据所依赖的数据发生改变导致的。
+1. 计算数据依赖的数据发生更新,通过数据依赖收集器dep的notify方法，对每个收集的依赖进行状态更新。
+2. 遇到computed watcher不会立刻执行依赖派发更新，而是通过dirty进行标记
+3. 由于数据拥有渲染watcher这个依赖，所以会执行updateComponent进行视图重新渲染。render过程中访问到计算属性又会对计算属性重新求值，保证改变前后两个值不同时才会更新下视图
+
+
+
+watch
+  依赖收集
+  1. watch数据初始化时会执行createWacher，createWatcher会调用原型上的$watch方法,即手动创建一个user watcher,
+  2. user watcher 在创建完毕后会执行一次getter求值,
+此时的getter只是一个需要监听的字符串，它可以是单纯一个属性值，也可以是以对象.属性的形式存在。
+  3. getter过程中会手动调用数据，触发数据的getter方法进行依赖收集，依赖收集首先将data属性的Dep收集器将user watcher作为依赖进行收集
+  4. 接着为数据的Dep添加当前user watcher依赖
