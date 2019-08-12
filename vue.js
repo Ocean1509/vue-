@@ -1944,7 +1944,6 @@
   var pending = false;
 
   function flushCallbacks () {
-    debugger
     pending = false;
     var copies = callbacks.slice(0);
     // 取出callbacks数组的每一个任务，执行任务
@@ -4580,7 +4579,6 @@
     } else if (this.sync) {
       this.run();
     } else {
-      debugger
       queueWatcher(this);
     }
   };
@@ -7078,8 +7076,7 @@
     dynamic
   ) {
     modifiers = modifiers || emptyObject;
-    // warn prevent and passive modifier
-    /* istanbul ignore if */
+    // passive 和 prevent不能同时使用，可以参照官方文档说明
     if (
       warn &&
       modifiers.prevent && modifiers.passive
@@ -7110,6 +7107,7 @@
     }
 
     // check capture modifier
+    // 这部分的逻辑会对特殊的修饰符做字符串拼接的处理，以备后续的使用
     if (modifiers.capture) {
       delete modifiers.capture;
       name = prependModifierMarker('!', name, dynamic);
@@ -10353,18 +10351,15 @@
     var list = el.attrsList;
     var i, l, name, rawName, value, modifiers, syncGen, isDynamic;
     for (i = 0, l = list.length; i < l; i++) {
-      name = rawName = list[i].name;
-      value = list[i].value;
-      if (dirRE.test(name)) {
-        // mark element as dynamic
+      name = rawName = list[i].name; // v-on:click
+      value = list[i].value; // doThis
+      if (dirRE.test(name)) { // 匹配v-或者@开头的指令
         el.hasBindings = true;
-        // modifiers
-        modifiers = parseModifiers(name.replace(dirRE, ''));
-        // support .foo shorthand syntax for the .prop modifier
+        modifiers = parseModifiers(name.replace(dirRE, ''));// parseModifiers('on:click')
         if (modifiers) {
           name = name.replace(modifierRE, '');
         }
-        if (bindRE.test(name)) { // v-bind
+        if (bindRE.test(name)) { // v-bind分支
           name = name.replace(bindRE, '');
           value = parseFilters(value);
           isDynamic = dynamicArgRE.test(name);
@@ -10431,9 +10426,9 @@
           } else {
             addAttr(el, name, value, list[i], isDynamic);
           }
-        } else if (onRE.test(name)) { // v-on
-          name = name.replace(onRE, '');
-          isDynamic = dynamicArgRE.test(name);
+        } else if (onRE.test(name)) { // v-on分支
+          name = name.replace(onRE, ''); // 拿到真正的事件click
+          isDynamic = dynamicArgRE.test(name);// 动态事件绑定
           if (isDynamic) {
             name = name.slice(1, -1);
           }
@@ -10493,8 +10488,8 @@
     return false
   }
 
-  function parseModifiers (name) {
-    var match = name.match(modifierRE);
+  function parseModifiers (name) { // 拿到事件相关的修饰符
+    var match = name.match(modifierRE); // ['.stop']
     if (match) {
       var ret = {};
       match.forEach(function (m) { ret[m.slice(1)] = true; });

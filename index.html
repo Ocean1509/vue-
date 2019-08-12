@@ -18,93 +18,24 @@
     <test :num-d="num"></test>
   </div> -->
   <div id="app">
-    <span @click="change">change</span>
-<<<<<<< HEAD
-    <div>{{test3}}</div>
-    
-=======
-    <!-- <div>{{obj.b}}</div> -->
-    <div>{{test}}</div>
->>>>>>> 9b8db29a0f6a3be3c69ff4979df3180afcee2f3d
-    <!-- <span :class="show = !show">点击</span>{{show? 'up': 'down'}} -->
+    <div v-on:click.stop="doThis">点击</div>
+    <span>{{count}}</span>
   </div>
   <script src="./vue.js"></script>
   <script>
     var vm = new Vue({
       el: '#app',
-      data: {
-        // test: true,
-<<<<<<< HEAD
-        test1: 1,
-        show: trueW
-=======
-        // test1: 1,
-        // show: true,
-        // arr: [1,2,3]，
-        // obj: {
-        //   a: 123
-        // },
-        // arr: [3,4]
-        test: 1
->>>>>>> 9b8db29a0f6a3be3c69ff4979df3180afcee2f3d
-        // test2: 2 
-      },
-      computed: {
-        test3() {
-          return this.test1
+      data() {
+        return {
+          count: 1
         }
       },
-      // watch: {
-      //   test1() {
-      //     console.log('0000')
-      //   }
-      // },
       methods: {
-        change() {
-          // this.obj.b = 123213;
-          // console.log(this.obj)
-          // Vue.set(this.obj, 'b', 3333);
-          // Vue.set(this.arr, 1, 234)
-          // console.log(this.arr)
-          for(var i =0;i<8;i++) {
-            this.test++
-          }
+        doThis() {
+          ++this.count
         }
       }
     })
-      // var vm = new Vue({
-      //   el: '#app',
-      //   data: {
-      //     num: 123
-      //   },
-      //   components: {
-      //     test: {
-      //       template: '<div><span>{{test1}}|{{numD}}|{{test2}}</span><span @click="change">修改</span></div>',
-      //       data () {
-      //         return {
-      //           test1: 2
-      //         }
-      //       },
-      //       props: ['numD'],
-      //       computed: {
-      //         test2() {
-      //           return this.test1 + 1;
-      //         }
-      //       },
-      //       watch: {
-      //         test1() {
-      //           console.log('----------')
-      //         }
-      //       },
-      //       methods: {
-      //         change() {
-      //           this.test1 ++
-      //         }
-      //       }
-      //     }
-      //   }
-      // })
-      // console.log(vm)
   </script>
   
 </body>
