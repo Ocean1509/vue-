@@ -145,4 +145,171 @@ function addHandler (el,name,value,modifiers,important,warn,range,dynamic) {
     el.plain = false;
   }
 ```
+最终转换的```AST```树如下：
+> 图-----------------
+
+### 2. render函数
+```AST```树解析完毕后，接下来会生成```render函数```, 即```var code = generate(ast, options);```
+```
+function generate (ast,options) {
+    var state = new CodegenState(options);
+    var code = ast ? genElement(ast, state) : '_c("div")';
+    return {
+      render: ("with(this){return " + code + "}"), // with函数
+      staticRenderFns: state.staticRenderFns
+    }
+  }
+```
+其中核心的处理在```getElement```中,而对于普通模板的编译在```genData```函数中处理，同样分析只针对事件相关的处理，从前面解析出的```AST```树明显看出，```AST```树中多了```events```的属性,```genHandlers```函数会为```event```属性做逻辑处理。
+```
+function genData (el, state) {
+    var data = '{';
+
+    // directives first.
+    // directives may mutate the el's other properties before they are generated.
+    var dirs = genDirectives(el, state);
+    if (dirs) { data += dirs + ','; }
+    //其他处理
+    ···
+
+    // event handlers
+    if (el.events) {
+      data += (genHandlers(el.events, false)) + ",";
+    }
+
+    ···
+
+    return data
+  }
+```
+```genHandlers```的逻辑，会遍历解析好的```AST```树，拿到```event```对象属性，并根据属性上的事件对象拼接成字符串。
+```
+function genHandlers (events,isNative) {
+    var prefix = isNative ? 'nativeOn:' : 'on:';
+    var staticHandlers = "";
+    var dynamicHandlers = "";
+    // 遍历ast树解析好的event对象
+    for (var name in events) {
+      //genHandler本质上是将事件对象转换成可拼接的字符串
+      var handlerCode = genHandler(events[name]);
+      if (events[name] && events[name].dynamic) {
+        dynamicHandlers += name + "," + handlerCode + ",";
+      } else {
+        staticHandlers += "\"" + name + "\":" + handlerCode + ",";
+      }
+    }
+    staticHandlers = "{" + (staticHandlers.slice(0, -1)) + "}";
+    if (dynamicHandlers) {
+      return prefix + "_d(" + staticHandlers + ",[" + (dynamicHandlers.slice(0, -1)) + "])"
+    } else {
+      return prefix + staticHandlers
+    }
+  }
+// 事件模板书写匹配
+var isMethodPath = simplePathRE.test(handler.value); // doThis
+var isFunctionExpression = fnExpRE.test(handler.value); // () => {} or function() {}
+var isFunctionInvocation = simplePathRE.test(handler.value.replace(fnInvokeRE, '')); // doThis($event)
+
+
+function genHandler (handler) {
+    if (!handler) {
+      return 'function(){}'
+    }
+    // 事件绑定可以多个，多个在解析ast树时会以数组的形式存在，如果有多个则会递归调用getHandler方法返回数组。
+    if (Array.isArray(handler)) {
+      return ("[" + (handler.map(function (handler) { return genHandler(handler); }).join(',')) + "]")
+    }
+    // value： doThis 可以有三种方式
+    var isMethodPath = simplePathRE.test(handler.value); // doThis
+    var isFunctionExpression = fnExpRE.test(handler.value); // () => {} or function() {}
+    var isFunctionInvocation = simplePathRE.test(handler.value.replace(fnInvokeRE, '')); // doThis($event)
+
+    // 没有任何修饰符
+    if (!handler.modifiers) {
+      // 符合函数定义规范，则直接返回调用函数名 doThis
+      if (isMethodPath || isFunctionExpression) {
+        return handler.value
+      }
+      // 不符合则通过function函数封装返回
+      return ("function($event){" + (isFunctionInvocation ? ("return " + (handler.value)) : handler.value) + "}") // inline statement
+    } else {
+    // 包含修饰符的场景
+    }
+  }
+```
+模板中事件的写法有三种,分别对应上诉上个正则匹配的内容。
+- 1. ```<div @click="doThis"></div>```
+- 2. ```<div @click="doThis($event)"></div>```
+- 3. ```<div @click="()=>{}"></div> <div @click="function(){}"></div>```
+
+上述对事件对象的转换，如果事件不带任何修饰符，并且满足正确的模板写法，则直接返回调用事件名，如果不满足，则有可能是```<div @click="console.log(11)"></div>```的写法，此时会封装到```function($event){}```中。
+
+包含修饰符的场景较多，我们单独列出分析。以上文中的例子说明，```modifiers: { stop: true }```会拿到```stop```对应需要添加的逻辑脚本```'$event.stopPropagation();'```,并将它添加到函数字符串中返回。
+```
+function genHandler() {
+  // ···
+  } else {
+    var code = '';
+    var genModifierCode = '';
+    var keys = [];
+    // 遍历modifiers上记录的修饰符
+    for (var key in handler.modifiers) {
+      if (modifierCode[key]) {
+        // 根据修饰符添加对应js的代码
+        genModifierCode += modifierCode[key];
+        // left/right
+        if (keyCodes[key]) {
+          keys.push(key);
+        }
+        // 针对exact的处理
+      } else if (key === 'exact') {
+        var modifiers = (handler.modifiers);
+        genModifierCode += genGuard(
+          ['ctrl', 'shift', 'alt', 'meta']
+            .filter(function (keyModifier) { return !modifiers[keyModifier]; })
+            .map(function (keyModifier) { return ("$event." + keyModifier + "Key"); })
+            .join('||')
+        );
+      } else {
+        keys.push(key);
+      }
+    }
+    if (keys.length) {
+      code += genKeyFilter(keys);
+    }
+    // Make sure modifiers like prevent and stop get executed after key filtering
+    if (genModifierCode) {
+      code += genModifierCode;
+    }
+    // 根据三种不同的书写模板返回不同的字符串
+    var handlerCode = isMethodPath
+      ? ("return " + (handler.value) + "($event)")
+      : isFunctionExpression
+        ? ("return (" + (handler.value) + ")($event)")
+        : isFunctionInvocation
+          ? ("return " + (handler.value))
+          : handler.value;
+    return ("function($event){" + code + handlerCode + "}")
+  }
+}
+var modifierCode = {
+  stop: '$event.stopPropagation();',
+  prevent: '$event.preventDefault();',
+  self: genGuard("$event.target !== $event.currentTarget"),
+  ctrl: genGuard("!$event.ctrlKey"),
+  shift: genGuard("!$event.shiftKey"),
+  alt: genGuard("!$event.altKey"),
+  meta: genGuard("!$event.metaKey"),
+  left: genGuard("'button' in $event && $event.button !== 0"),
+  middle: genGuard("'button' in $event && $event.button !== 1"),
+  right: genGuard("'button' in $event && $event.button !== 2")
+};
+```
+
+经过这一转行后，生成的```with```封装的```render```函数如下：
+```
+"_c('div',{attrs:{"id":"app"}},[_c('div',{on:{"click":function($event){$event.stopPropagation();return doThis($event)}}},[_v("点击")]),_v(" "),_c('span',[_v(_s(count))])])"
+```
+
+### 3. 事件绑定
 

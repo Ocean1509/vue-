@@ -10802,9 +10802,9 @@
 
   /*  */
 
-  var fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function\s*\(/;
+  var fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function\s*\(/;// () => {} or function() {}
   var fnInvokeRE = /\([^)]*?\);*$/;
-  var simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['[^']*?']|\["[^"]*?"]|\[\d+]|\[[A-Za-z_$][\w$]*])*$/;
+  var simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['[^']*?']|\["[^"]*?"]|\[\d+]|\[[A-Za-z_$][\w$]*])*$/; // 普通函数名
 
   // KeyboardEvent.keyCode aliases
   var keyCodes = {
@@ -10861,7 +10861,9 @@
     var prefix = isNative ? 'nativeOn:' : 'on:';
     var staticHandlers = "";
     var dynamicHandlers = "";
+    // 遍历ast树解析好的event对象
     for (var name in events) {
+      //genHandler本质上是将事件对象转换成可拼接的字符串
       var handlerCode = genHandler(events[name]);
       if (events[name] && events[name].dynamic) {
         dynamicHandlers += name + "," + handlerCode + ",";
@@ -10881,16 +10883,18 @@
     if (!handler) {
       return 'function(){}'
     }
-
+    // 事件绑定可以多个，多个在解析ast树时会以数组的形式存在，如果有多个则会递归调用getHandler方法返回数组。
     if (Array.isArray(handler)) {
       return ("[" + (handler.map(function (handler) { return genHandler(handler); }).join(',')) + "]")
     }
+    // value： doThis 可以有三种方式
+    var isMethodPath = simplePathRE.test(handler.value); // doThis
+    var isFunctionExpression = fnExpRE.test(handler.value); // () => {} or function() {}
+    var isFunctionInvocation = simplePathRE.test(handler.value.replace(fnInvokeRE, '')); // doThis($event)
 
-    var isMethodPath = simplePathRE.test(handler.value);
-    var isFunctionExpression = fnExpRE.test(handler.value);
-    var isFunctionInvocation = simplePathRE.test(handler.value.replace(fnInvokeRE, ''));
-
+    // 没有任何修饰符
     if (!handler.modifiers) {
+      // 符合函数定义规范，则直接返回调用函数名 doThis
       if (isMethodPath || isFunctionExpression) {
         return handler.value
       }
