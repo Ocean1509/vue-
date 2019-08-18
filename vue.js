@@ -2217,9 +2217,11 @@
       var arguments$1 = arguments;
 
       var fns = invoker.fns;
+      // fns是多个回调函数组成的数组
       if (Array.isArray(fns)) {
         var cloned = fns.slice();
         for (var i = 0; i < cloned.length; i++) {
+          // 遍历执行真正的回调函数
           invokeWithErrorHandling(cloned[i], null, arguments$1, vm, "v-on handler");
         }
       } else {
@@ -2228,6 +2230,7 @@
       }
     }
     invoker.fns = fns;
+    // 最终事件执行的回调函数
     return invoker
   }
 
@@ -2240,28 +2243,35 @@
     vm
   ) {
     var name, def$$1, cur, old, event;
+    // 遍历事件
     for (name in on) {
       def$$1 = cur = on[name];
       old = oldOn[name];
       event = normalizeEvent(name);
       if (isUndef(cur)) {
+        // 事件名非法的报错处理
         warn(
           "Invalid handler for event \"" + (event.name) + "\": got " + String(cur),
           vm
         );
       } else if (isUndef(old)) {
+        // 旧节点不存在
         if (isUndef(cur.fns)) {
+          // createFunInvoker返回事件最终执行的回调函数
           cur = on[name] = createFnInvoker(cur, vm);
         }
+        // 只触发一次的事件
         if (isTrue(event.once)) {
           cur = on[name] = createOnceHandler(event.name, cur, event.capture);
         }
+        // 执行真正注册事件的执行函数
         add(event.name, cur, event.capture, event.passive, event.params);
       } else if (cur !== old) {
         old.fns = cur;
         on[name] = old;
       }
     }
+    // 旧节点存在，接触旧节点上的绑定事件
     for (name in oldOn) {
       if (isUndef(on[name])) {
         event = normalizeEvent(name);
@@ -5141,7 +5151,7 @@
   // 在引进Vue时，会执行initMixin方法，这个方法只单纯在vue的原型上定义一个init的方法，而init方法只在在实例化Vue时执行
   initMixin(Vue);
   stateMixin(Vue);
-  eventsMixin(Vue);
+  eventsMixin(Vue); //定义事件相关处理函数
   lifecycleMixin(Vue); // 定义渲染相关的周期函数
   renderMixin(Vue); // 定义渲染相关的函数
 
@@ -6384,6 +6394,7 @@
 
       var oldCh = oldVnode.children;
       var ch = vnode.children;
+      debugger
       if (isDef(data) && isPatchable(vnode)) {
         for (i = 0; i < cbs.update.length; ++i) { cbs.update[i](oldVnode, vnode); }
         if (isDef(i = data.hook) && isDef(i = i.update)) { i(oldVnode, vnode); }
@@ -7641,6 +7652,7 @@
     capture,
     _target
   ) {
+    debugger
     (_target || target$1).removeEventListener(
       name,
       handler._wrapper || handler,
@@ -7649,9 +7661,11 @@
   }
 
   function updateDOMListeners (oldVnode, vnode) {
+    // on是事件指令的标志
     if (isUndef(oldVnode.data.on) && isUndef(vnode.data.on)) {
       return
     }
+    // 新旧节点不同的事件绑定
     var on = vnode.data.on || {};
     var oldOn = oldVnode.data.on || {};
     target$1 = vnode.elm;
@@ -11893,6 +11907,7 @@
     template,
     options
   ) {
+    debugger
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
