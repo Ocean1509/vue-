@@ -19,7 +19,7 @@
 添加事件，子优先于父
 
 ### 1. 模板编译
-Vue在挂载实例前，有相当多的工作是进行模板的编译，将```template```模板进行编译，解析成```AST```树，在转换成平台所需的代码，对于客户端而言，就是```render```函数，有了```render```函数才能进入实例挂载过程。而对于事件而言，我们经常使用```v-on```或者```@```在模板上绑定事件。因此对事件的第一步处理，就是在编译阶段收集事件指令。
+Vue在挂载实例前，有相当多的工作是进行模板的编译，将```template```模板进行编译，解析成```AST```树，再转换成平台所需的代码，对于客户端而言，就是```render```函数，有了```render```函数才能进入实例挂载过程。而对于事件而言，我们经常使用```v-on```或者```@```在模板上绑定事件。因此对事件的第一步处理，就是在编译阶段收集相关事件指令。
 
 从一个简单的用法分析编译阶段收集的信息：
 ```
@@ -44,7 +44,7 @@ var vm = new Vue({
 </script>
 ```
 
-编译的入口在```var ast = parse(template.trim(), options);```中，具体可参考[深入剖析Vue源码 - 实例挂载,编译流程](https://juejin.im/post/5ccafd4d51882540d472a90e)这节，```parse```通过拆分模板字符串，对其解析为一个```AST```树，其中对于属性的解析后的处理，在```processAttr```中,其中分支较多，我们只分析例子中的流程和一些重要的分支。
+编译的入口在```var ast = parse(template.trim(), options);```中，具体可参考[深入剖析Vue源码 - 实例挂载,编译流程](https://juejin.im/post/5ccafd4d51882540d472a90e)这节，```parse```通过拆分模板字符串，对其解析为一个```AST```树，其中对于属性解析后的处理，在```processAttr```中,其中分支较多，我们只分析例子中的流程和一些重要的分支。
 
 ```
 function processAttrs (el) {
@@ -312,4 +312,201 @@ var modifierCode = {
 ```
 
 ### 3. 事件绑定
+
+### 事件绑定
+前面花了大量的篇幅介绍了模板上的事件标记在构建```AST```树上怎么处理，并且如果根据构建的```AST```树返回正确的```render```渲染函数，但是真正事件绑定还是离不开绑定注册事件。这一个阶段就是发生在组件挂载的阶段。
+有了```render```函数，自然可以生成实例挂载需要的```Vnode```树，并且会进行```patchVnode```的环节进行真实节点的构建，如果发现过程已经遗忘，可以回顾[深入剖析Vue源码 - 组件基础](https://juejin.im/post/5cee4ba4518825092c715438)章节。
+```Vnode```树的构建过程和之前介绍的内容没有明显的区别，所以这个过程就不做赘述，最终生成的```vnode```如下：
+----> 图
+有了```Vnode```,接下来会遍历子节点递归调用```createElm```为每个子节点创建真实的```DOM```,由于```Vnode```中有```data```属性，在创建真实```DOM```时会进行注册相关钩子的构成，其中一个就是注册事件相关处理。
+```
+function createElm() {
+  ···
+   if (isDef(data)) {
+      invokeCreateHooks(vnode, insertedVnodeQueue);
+    }
+}
+```
+我们经常会在```template```模板中定义```v-on```事件，```v-bind```动态属性，```v-text```动态指令等，和```v-on```事件指令一样，他们都会在编译阶段和```Vnode```生成阶段创建```data```属性，因此```invokeCreateHooks```就是一个模板指令处理的任务，他分别针对指令的不同为真实阶段创建不同的任务，例如真实```DOM```属性设置，这些后续在专门指令总结篇会说到，针对事件，这里会调用```updateDOMListeners```对真实的```DOM```节点注册事件任务。
+```
+function updateDOMListeners (oldVnode, vnode) {
+  // on是事件指令的标志
+  if (isUndef(oldVnode.data.on) && isUndef(vnode.data.on)) {
+    return
+  }
+  // 新旧节点不同的事件绑定解绑
+  var on = vnode.data.on || {};
+  var oldOn = oldVnode.data.on || {};
+  // 拿到需要添加事件的真实DOM节点
+  target$1 = vnode.elm;
+  // normalizeEvents是对事件兼容性的处理
+  normalizeEvents(on);
+  updateListeners(on, oldOn, add$1, remove$2, createOnceHandler$1, vnode.context);
+  target$1 = undefined;
+}
+```
+其中```normalizeEvents```是针对```v-model```的处理,例如在IE下不支持```change```事件，只能用```input```事件代替。
+
+```updateListeners```的逻辑也很简单，它会遍历```on```事件对新节点事件绑定注册事件，对旧节点移除事件监听，它即要处理原生```DOM```事件的添加和移除，也要处理自定义事件的添加和移除，关于自定义事件，后续内容再分析。
+```
+function updateListeners (on,oldOn,add,remove$$1,createOnceHandler,vm) {
+    var name, def$$1, cur, old, event;
+    // 遍历事件
+    for (name in on) {
+      def$$1 = cur = on[name];
+      old = oldOn[name];
+      event = normalizeEvent(name);
+      if (isUndef(cur)) {
+        // 事件名非法的报错处理
+        warn(
+          "Invalid handler for event \"" + (event.name) + "\": got " + String(cur),
+          vm
+        );
+      } else if (isUndef(old)) {
+        // 旧节点不存在
+        if (isUndef(cur.fns)) {
+          // createFunInvoker返回事件最终执行的回调函数
+          cur = on[name] = createFnInvoker(cur, vm);
+        }
+        // 只触发一次的事件
+        if (isTrue(event.once)) {
+          cur = on[name] = createOnceHandler(event.name, cur, event.capture);
+        }
+        // 执行真正注册事件的执行函数
+        add(event.name, cur, event.capture, event.passive, event.params);
+      } else if (cur !== old) {
+        old.fns = cur;
+        on[name] = old;
+      }
+    }
+    // 旧节点存在，接触旧节点上的绑定事件
+    for (name in oldOn) {
+      if (isUndef(on[name])) {
+        event = normalizeEvent(name);
+        remove$$1(event.name, oldOn[name], event.capture);
+      }
+    }
+  }
+```
+在初始构建实例时，旧节点是不存在的,此时会调用```createFnInvoker```函数对事件回调函数做一层封装，由于单个事件的回调可以有多个，因此```createFnInvoker```的作用是对单个，多个回调事件统一封装处理，返回一个当事件触发时真正执行的匿名函数。
+```
+function createFnInvoker (fns, vm) {
+  // 当事件触发时，执行invoker方法，方法执行fns
+  function invoker () {
+    var arguments$1 = arguments;
+
+    var fns = invoker.fns;
+    // fns是多个回调函数组成的数组
+    if (Array.isArray(fns)) {
+      var cloned = fns.slice();
+      for (var i = 0; i < cloned.length; i++) {
+        // 遍历执行真正的回调函数
+        invokeWithErrorHandling(cloned[i], null, arguments$1, vm, "v-on handler");
+      }
+    } else {
+      // return handler return value for single handlers
+      return invokeWithErrorHandling(fns, null, arguments, vm, "v-on handler")
+    }
+  }
+  invoker.fns = fns;
+  // 返回最终事件执行的回调函数
+  return invoker
+}
+```
+其中```invokeWithErrorHandling```会执行定义好的回调函数，这里做了同步异步回调的错误处理。```try-catch```用于同步回调捕获异常错误，```Promise.catch```用于捕获异步任务返回错误。
+```
+function invokeWithErrorHandling (handler,context,args,vm,info) {
+    var res;
+    try {
+      res = args ? handler.apply(context, args) : handler.call(context);
+      if (res && !res._isVue && isPromise(res)) {
+        // issue #9511
+        // reassign to res to avoid catch triggering multiple times when nested calls
+        // 当生命周期钩子函数内部执行返回promise对象是，如果捕获异常，则会对异常信息做一层包装返回
+        res = res.catch(function (e) { return handleError(e, vm, info + " (Promise/async)"); });
+      }
+    } catch (e) {
+      handleError(e, vm, info);
+    }
+    return res
+  }
+```
+如果事件只触发一次(即使用了```once```修饰符)，则调用```createOnceHandler```匿名，在执行完回调之后，移除事件绑定。
+```
+function createOnceHandler (event, handler, capture) {
+    var _target = target$1; 
+    return function onceHandler () {
+      //调用事件回调
+      var res = handler.apply(null, arguments);
+      if (res !== null) {
+        // 移除事件绑定
+        remove$2(event, onceHandler, capture, _target);
+      }
+    }
+  }
+```
+```add```和```remove```是真正在```DOM```上绑定事件和解绑事件的过程，它的实现也是利用了原生```DOM```的```addEventListener,removeEventListener```api。
+```
+function add (name,handler,capture,passive){
+  ···
+  target$1.addEventListener(name,handler,
+      supportsPassive
+        ? { capture: capture, passive: passive }
+        : capture);
+}
+function remove (name,handler,capture,_target) {
+  (_target || target$1).removeEventListener(
+    name,
+    handler._wrapper || handler,
+    capture
+  );
+}
+```
+另外事件的解绑除了发生在只触发一次的事件，回调后的处理，也发生在组件更新```patchVnode```过程，具体不展开分析，可以参考之前介绍组件更新的内容研究```updateListeners```的过程。
+
+### 5. 自定义事件
+Vue如何处理原生的```Dom```事件基本流程已经讲完，然后针对事件还有一个重要的概念不可忽略，那就是组件的自定义事件。我们知道父子组件可以利用事件进行通信，子组件通过```vm.$emit```向父组件分发事件，父组件通过```v-on:(event)```接收信息。因此针对自定义事件在源码当自然有不同的处理逻辑。我们先通过简单的例子展开。
+```
+<script>
+    var child = {
+      template: `<div @click="emitToParent">点击传递信息给父组件</div>`,
+      methods: {
+        emitToParent() {
+          this.$emit('myevent', 1)
+        }
+      }
+    }
+    new Vue({
+      el: '#app',
+      components: {
+        child
+      },
+      template: `<div id="app"><child @myevent="myevent" @click.native="nativeClick"></child></div>`,
+      methods: {
+        myevent(num) {
+          console.log(num)
+        },
+        nativeClick() {
+          console.log('nativeClick')
+        }
+      }
+    })
+  </script>
+```
+从例子中可以看出，普通节点只能使用原生```DOM```事件，而组件上却可以使用自定义的事件和原生的```DOM```事件，并且通过```native```修饰符区分，有了原生```DOM```对于事件处理的基础，接下来我们看看自定义事件有什么特别之处。
+
+##### 模板编译
+回过头来看看事件的模板编译，在生成```AST```树阶段，之前分析说过```addHandler```方法会对事件的修饰符做不同的处理，当遇到```native```修饰符时，事件相关属性方法会添加到```nativeEvents```属性中。
+下图是```child```生成的```AST```树:
+---> 图
+
+
+##### 代码生成
+
+
+
+在介绍注册绑定事件之前，我们回头来看看Vue在引入阶段对事件的处理还做了哪些初始化操作。
+```
+  eventsMixin(Vue); // 定义事件相关函数
+```
 

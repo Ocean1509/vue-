@@ -18,43 +18,29 @@
     <test :num-d="num"></test>
   </div> -->
   <div id="app">
-    <div v-on:click.stop="doThis">点击</div>
-    <!-- <child @clickparent="clickparent1" @click.native="clicke"></child> -->
-    <span>{{count}}</span>
-    <!-- <span>{{childCount}}</span> -->
   </div>
   <script src="./vue.js"></script>
   <script>
-    let child = {
-      template: '<button @click="clickHandler($event)">' +
-        'click me' +
-        '</button>',
+    var child = {
+      template: `<div @click="emitToParent">点击传递信息给父组件</div>`,
       methods: {
-        clickHandler(e) {
-          this.$emit('clickparent')
-        },
-        clicke() {
-
+        emitToParent() {
+          this.$emit('myevent', 1)
         }
       }
     }
-    var vm = new Vue({
+    new Vue({
       el: '#app',
-      data() {
-        return {
-          count: 1,
-          childCount: 1
-        }
-      },
       components: {
         child
       },
+      template: `<div id="app"><child @myevent="myevent" @click.native="nativeClick"></child></div>`,
       methods: {
-        doThis() {
-          ++this.count
+        myevent(num) {
+          console.log(num)
         },
-        clickparent1() {
-          ++this.childCount
+        nativeClick() {
+          console.log('1111')
         }
       }
     })
