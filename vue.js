@@ -1607,7 +1607,7 @@
    * This function is used because child instances need access
    * to assets defined in its ancestor chain.
    */
-  // 需要明确组件是否已经被注册
+  // 需要明确组件是否存在于实例options中
   function resolveAsset (
     options,
     type,
@@ -2551,6 +2551,7 @@
     children,
     context
   ) {
+    debugger
     if (!children || !children.length) {
       return {}
     }
@@ -2717,12 +2718,14 @@
   /**
    * Runtime helper for rendering <slot>
    */
+  // 渲染slot组件内容
   function renderSlot (
     name,
     fallback,
     props,
     bindObject
   ) {
+    debugger
     var scopedSlotFn = this.$scopedSlots[name];
     var nodes;
     if (scopedSlotFn) { // scoped slot
@@ -3227,7 +3230,6 @@
     children, // 子节点
     tag // 子组件占位符
   ) {
-
     if (isUndef(Ctor)) {
       return
     }
@@ -3546,6 +3548,7 @@
     var options = vm.$options;
     var parentVnode = vm.$vnode = options._parentVnode; // the placeholder node in parent tree
     var renderContext = parentVnode && parentVnode.context;
+    debugger
     vm.$slots = resolveSlots(options._renderChildren, renderContext);
     vm.$scopedSlots = emptyObject;
     // bind the createElement fn to this instance
@@ -3589,6 +3592,7 @@
       var _parentVnode = ref._parentVnode;
 
       if (_parentVnode) {
+        debugger
         vm.$scopedSlots = normalizeScopedSlots(
           _parentVnode.data.scopedSlots,
           vm.$slots,
@@ -6394,7 +6398,6 @@
 
       var oldCh = oldVnode.children;
       var ch = vnode.children;
-      debugger
       if (isDef(data) && isPatchable(vnode)) {
         for (i = 0; i < cbs.update.length; ++i) { cbs.update[i](oldVnode, vnode); }
         if (isDef(i = data.hook) && isDef(i = i.update)) { i(oldVnode, vnode); }
@@ -7652,7 +7655,6 @@
     capture,
     _target
   ) {
-    debugger
     (_target || target$1).removeEventListener(
       name,
       handler._wrapper || handler,
@@ -11493,6 +11495,7 @@
 
   function genSlot (el, state) {
     var slotName = el.slotName || '"default"';
+    // 如果子组件的插槽还有子元素，则会递归调执行子元素的创建过程
     var children = genChildren(el, state);
     var res = "_t(" + slotName + (children ? ("," + children) : '');
     var attrs = el.attrs || el.dynamicAttrs
@@ -11911,12 +11914,12 @@
     template,
     options
   ) {
-    debugger
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
     }
     var code = generate(ast, options);
+    debugger
     return {
       ast: ast,
       render: code.render,

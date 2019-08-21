@@ -22,26 +22,25 @@
   <script src="./vue.js"></script>
   <script>
     var child = {
-      template: `<div @click="emitToParent">点击传递信息给父组件</div>`,
+      template: `<div>上<slot></slot>下<a v-bind:href="url"></a></div>`,
       methods: {
-        emitToParent() {
-          this.$emit('myevent', 1)
-        }
-      }
+      },
+      props: ['url']
     }
     new Vue({
       el: '#app',
       components: {
         child
       },
-      template: `<div id="app"><child @myevent="myevent" @click.native="nativeClick"></child></div>`,
-      methods: {
-        myevent(num) {
-          console.log(num)
-        },
-        nativeClick() {
-          console.log('1111')
+      data () {
+        return {
+          test: '111'
         }
+      },
+      template: `<div id="app">
+        <child url="/profile">父内容{{url}}</child>
+      </div>`,
+      methods: {
       }
     })
   </script>
