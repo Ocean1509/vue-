@@ -21,28 +21,67 @@
   </div>
   <script src="./vue.js"></script>
   <script>
+    // var child = {
+    //   template: `<div>上<slot name="header">墩墩墩</slot><slot name="footer"></slot>下</div>`,
+    //   methods: {
+    //   },
+    //   props: ['urls']
+    // }
+    // var vm = new Vue({
+    //   el: '#app',
+    //   components: {
+    //     child
+    //   },
+    //   data () {
+    //     return {
+    //       test: '111'
+    //     }
+    //   },
+    //   template: `<div id="app">
+    //     <child><template v-slot:header>
+    //       头部
+    //     </template><template v-slot:footer>
+    //       底部
+    //     </template></child>
+    //   </div>`,
+    //   methods: {
+    //   }
+    // })
+    // console.log(vm)
     var child = {
-      template: `<div>上<slot></slot>下<a v-bind:href="url"></a></div>`,
-      methods: {
+      template: `<div>上<slot :user="user">{{user.lastName}}</slot>下
+     </div>`,
+      methods: {},
+      data() {
+        return {
+          user: {
+            firstName: 'li',
+            lastName: 'yang'
+          }
+        }
       },
-      props: ['url']
     }
-    new Vue({
+    var vm = new Vue({
       el: '#app',
       components: {
         child
       },
-      data () {
+      data() {
         return {
-          test: '111'
+          test: '111',
+
         }
       },
       template: `<div id="app">
-        <child url="/profile">父内容{{url}}</child>
-      </div>`,
-      methods: {
-      }
+       <child>
+        <template v-slot:default="slotProps">
+         {{slotProps.user.firstName}}
+        </template>
+       </child>
+     </div>`,
+      methods: {}
     })
+    console.log(vm)
   </script>
 
 </body>

@@ -2721,13 +2721,14 @@
   // 渲染slot组件内容
   function renderSlot (
     name,
-    fallback,
-    props,
+    fallback, // slot插槽后备内容
+    props, // 子传给父的值
     bindObject
   ) {
     debugger
     var scopedSlotFn = this.$scopedSlots[name];
     var nodes;
+    // 针对具名插槽，特点是$scopedSlots有值
     if (scopedSlotFn) { // scoped slot
       props = props || {};
       if (bindObject) {
@@ -2739,8 +2740,10 @@
         }
         props = extend(extend({}, bindObject), props);
       }
+      // 执行时将子组件传递给父组件的值传入fn
       nodes = scopedSlotFn(props) || fallback;
     } else {
+      // 如果父占位符组件没有插槽内容，this.$slots不会有值，此时vnode节点为后备内容节点。
       nodes = this.$slots[name] || fallback;
     }
 
@@ -2931,7 +2934,7 @@
   }
 
   /*  */
-
+  // vnode生成阶段针对具名插槽的处理 _u
   function resolveScopedSlots (
     fns, // see flow/vnode
     res,
@@ -2957,6 +2960,13 @@
     }
     return res
   }
+  /* 最终的vnode节点的data属性上多了scopedSlots的属性
+  {
+    scopedSlots: [{
+      'header': fn
+    }]
+  }
+  */
 
   /*  */
 
@@ -3463,6 +3473,7 @@
       typeof children[0] === 'function'
     ) {
       data = data || {};
+      debugger
       data.scopedSlots = { default: children[0] };
       children.length = 0;
     }
@@ -3549,7 +3560,7 @@
     var parentVnode = vm.$vnode = options._parentVnode; // the placeholder node in parent tree
     var renderContext = parentVnode && parentVnode.context;
     debugger
-    vm.$slots = resolveSlots(options._renderChildren, renderContext);
+    vm.$slots = resolveSlots(options._renderChildren, renderContext);// $slots拿到了子占位符节点的_renderchildren即插槽内容，保留作为子实例的属性
     vm.$scopedSlots = emptyObject;
     // bind the createElement fn to this instance
     // so that we get proper render context inside it.
@@ -3590,7 +3601,7 @@
       var ref = vm.$options;
       var render = ref.render;
       var _parentVnode = ref._parentVnode;
-
+      debugger
       if (_parentVnode) {
         debugger
         vm.$scopedSlots = normalizeScopedSlots(
@@ -4715,6 +4726,7 @@
     if (!isRoot) {
       toggleObserving(false);
     }
+    debugger
     var loop = function ( key ) {
       keys.push(key);
       var value = validateProp(key, propsOptions, propsData, vm);
@@ -5046,6 +5058,7 @@
         // optimize internal component instantiation
         // since dynamic options merging is pretty slow, and none of the
         // internal component options needs special treatment.
+        debugger
         initInternalComponent(vm, options);
       } else {
         // 选项合并，将合并后的选项赋值给实例的$options属性
@@ -10244,6 +10257,7 @@
 
     // 2.6 v-slot syntax
     {
+      // 针对插槽<template v-slot:header></template>
       if (el.tag === 'template') {
         // v-slot on <template>
         var slotBinding = getAndRemoveAttrByRegex(el, slotRE);
@@ -11494,10 +11508,12 @@
   }
 
   function genSlot (el, state) {
+    debugger
     var slotName = el.slotName || '"default"';
     // 如果子组件的插槽还有子元素，则会递归调执行子元素的创建过程
     var children = genChildren(el, state);
     var res = "_t(" + slotName + (children ? ("," + children) : '');
+    // 拿到<slot :name="name"></slot>中的属性name
     var attrs = el.attrs || el.dynamicAttrs
       ? genProps((el.attrs || []).concat(el.dynamicAttrs || []).map(function (attr) { return ({
           // slot props are camelized
