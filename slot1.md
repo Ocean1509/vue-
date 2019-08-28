@@ -45,7 +45,7 @@ var vm = new Vue({
 ```
 前面花了大量的篇幅介绍了基本插槽的用法，接下来针对具名插槽，我们看看源码实现中不同的地方。
 
-##### 10.3.1 模板编译的差别
+##### 10.3.1 
 
 ？ createComponent
 ```
@@ -64,7 +64,7 @@ if (isTrue(Ctor.options.abstract)) {
 
 具名插槽的render函数
 ```
-{scopedSlots:_u([{key:"header",fn:function(){return [_v("\n头部\n")]},proxy:true},{key:"footer",fn:function(){return [_v("\n底部\n")]}
+with(this){return _c('div',{attrs:{"id":"app"}},[_c('child',{scopedSlots:_u([{key:"header",fn:function(){return [_c('span',[_v("头部")])]},proxy:true},{key:"footer",fn:function(){return [_c('span',[_v("底部")])]},proxy:true}])})],1)}
 ```
 最终以**data属性**的形式存储在scopedSlots属性中，它并不再以componentOptions.child的形式保留在父组件中
 

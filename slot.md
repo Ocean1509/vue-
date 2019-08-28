@@ -189,6 +189,7 @@ Vue.prototype._render = function() {
     // scopedSlotFn拿到父组件插槽的执行函数，默认slotname为default
     var scopedSlotFn = this.$scopedSlots[name];
     var nodes;
+    // 具名插槽分支
     if (scopedSlotFn) { // scoped slot
       props = props || {};
       if (bindObject) {
@@ -249,7 +250,110 @@ var vm = new Vue({
 ```
 最终，在父组件没有提供内容时，```slot```的后备内容被渲染。
 
+有了这些基础，我们再来看官网给的一条规则
+> 父级模板里的所有内容都是在父级作用域中编译的；子模板里的所有内容都是在子作用域中编译的。
 
-### 10.3 编译作用域的理解
-父组件中插槽的内容是不能访问到子组件作用域的数据的，Vue官网也提供了一条规则
->  父级模板里的所有内容都是在父级作用域中编译的；子模板里的所有内容都是在子作用域中编译的。
+父组件模板的内容在父组件编译阶段就确定了,并且保存在```componentOptions```属性中，而子组件有自身初始化```init```的过程，这个过程同样会进行子作用域的模板编译，因此两部分内容是独立开来的。
+
+### 10.3 具名插槽
+往往我们需要灵活的使用插槽进行通用组件的开发，要求父组件每个模板对应子组件中每个插槽，这时我们可以使用```<slot>```的```name```属性，用法同样举个简单的例子。
+```
+var child = {
+  template: `<div class="child"><slot name="header"></slot><slot name="footer"></slot></div>`,
+}
+var vm = new Vue({
+  el: '#app',
+  components: {
+    child
+  },
+  template: `<div id="app"><child><template v-slot:header><span>头部</span></template><template v-slot:footer><span>底部</span></template></child></div>`,
+})
+```
+渲染结果：
+```
+<div class="child"><span>头部</span><span>底部</span></div>
+```
+接下来我们在普通插槽的基础上，看看源码在具名插槽实现上的区别。
+
+##### 10.3.1 模板编译的差别
+父组件在编译```AST```阶段和普通节点的过程不同，具名插槽一般会在```template```模板中用```v-slot:```来标注指定插槽，这一阶段会在编译阶段特殊处理。最终的```AST```树会携带```scopedSlots```用来记录具名插槽的内容
+```
+{
+  scopedSlots： {
+    footer: { ··· },
+    header: { ··· }
+  }
+}
+```
+```AST```生成```render```函数的过程也不详细分析了，我们只分析父组件最终返回的结果(如果对```parse, generate```感兴趣的同学，可以直接看源码分析,编译阶段冗长且难以讲解，跳过这部分分析)
+
+```
+with(this){return _c('div',{attrs:{"id":"app"}},[_c('child',{scopedSlots:_u([{key:"header",fn:function(){return [_c('span',[_v("头部")])]},proxy:true},{key:"footer",fn:function(){return [_c('span',[_v("底部")])]},proxy:true}])})],1)}
+```
+很明显，父组件的插槽内容用```_u```函数封装成数组的形式，并赋值到```scopedSlots```属性中，而每一个插槽以对象描述，```key```代表插槽名，```fn```是一个返回执行结果的函数。
+
+##### 10.3.2 父组件vnode生成阶段
+
+照例进入父组件生成```Vnode```阶段，其中```_u```函数的原形是```resolveScopedSlots```,其中第一个参数就是插槽数组。
+```
+// vnode生成阶段针对具名插槽的处理 _u
+  function resolveScopedSlots (fns,res,hasDynamicKeys,contentHashKey) {
+    res = res || { $stable: !hasDynamicKeys };
+    for (var i = 0; i < fns.length; i++) {
+      var slot = fns[i];
+      // fn是数组需要递归处理。
+      if (Array.isArray(slot)) {
+        resolveScopedSlots(slot, res, hasDynamicKeys);
+      } else if (slot) {
+        // marker for reverse proxying v-slot without scope on this.$slots
+        if (slot.proxy) { //  针对proxy的处理
+          slot.fn.proxy = true;
+        }
+        // 最终返回一个对象，对象以slotname作为属性，以fn作为值
+        res[slot.key] = slot.fn;
+      }
+    }
+    if (contentHashKey) {
+      (res).$key = contentHashKey;
+    }
+    return res
+  }
+```
+最终父组件的```vnode```节点的```data```属性上多了```scopedSlots```数组。**回顾一下，具名插槽和普通插槽实现上有明显的不同，普通插槽是以```componentOptions.child```的形式保留在父组件中，而具名插槽是以```scopedSlots```属性的形式存储到```data```属性中。**
+```
+// vnode
+{
+  scopedSlots: [{
+    'header': fn,
+    'footer': fn
+  }]
+}
+```
+
+##### 10.3.3 子组件渲染Vnode过程
+子组件在解析成```AST```树阶段，```slot```标签的```name```属性会解析成```slotName```属性,而在```render```生成```Vnode```过程中，```slot```的规范化处理针对具名插槽会进行特殊的处理，回到```normalizeScopedSlots```的代码
+```
+vm.$scopedSlots = normalizeScopedSlots(
+  _parentVnode.data.scopedSlots, // 此时的第一个参数会拿到父组件插槽相关的数据
+  vm.$slots, // 记录父组件的插槽内容
+  vm.$scopedSlots
+);
+
+```
+最终子组件实例上的```$scopedSlots```属性会携带父组件插槽相关的内容。
+```
+// 子组件实例
+{
+  $scopedSlots: [{
+    'header': f,
+    'footer': f
+  }]
+}
+```
+
+##### 10.3.4 子组件渲染真实dom
+和普通插槽类似，子组件渲染真实节点的过程会执行子```render```函数中的```_t```方法，这部分可以参考上文```renderSlot```的源码,和普通插槽不同的分支在于，```this.$scopedSlots```记录着父组件插槽内容相关的数据，所以会和普通插槽走不同的分支。而最终的核心是执行```nodes = scopedSlotFn(props)```,也就是执行```function(){return [_c('span',[_v("头部")])]}```,具名插槽之所以是函数的形式执行而不是直接返回，我们在后面揭晓。
+
+至此子组件通过```slotName```找到了对应父组件的插槽内容。
+
+

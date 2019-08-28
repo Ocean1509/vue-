@@ -82,10 +82,25 @@
     //   methods: {}
     // })
     // console.log(vm)
+    // var child = {
+    //   template: `<div class="child">
+    //   <slot>test</slot>
+    // </div>`
+    // }
+    // var vm = new Vue({
+    //   el: '#app',
+    //   components: {
+    //     child
+    //   },
+    //   template: `<div id="app">
+    //   <child></child>
+    // </div>`
+    // })
     var child = {
       template: `<div class="child">
-      <slot>test</slot>
-    </div>`
+      <slot name="header"></slot>
+      <slot name="footer"></slot>
+    </div>`,
     }
     var vm = new Vue({
       el: '#app',
@@ -93,8 +108,9 @@
         child
       },
       template: `<div id="app">
-      <child></child>
-    </div>`
+      <child><template v-slot:header><span>头部</span></template><template v-slot:footer><span>底部</span></template>
+      </child>
+    </div>`,
     })
   </script>
 

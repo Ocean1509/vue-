@@ -10261,6 +10261,7 @@
     {
       // 针对插槽<template v-slot:header></template>
       if (el.tag === 'template') {
+        debugger
         // v-slot on <template>
         var slotBinding = getAndRemoveAttrByRegex(el, slotRE);
         if (slotBinding) {
