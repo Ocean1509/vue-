@@ -2726,6 +2726,7 @@
     bindObject
   ) {
     debugger
+    // scopedSlotFn拿到父组件插槽的执行函数，默认slotname为default
     var scopedSlotFn = this.$scopedSlots[name];
     var nodes;
     // 针对具名插槽，特点是$scopedSlots有值
@@ -3243,7 +3244,7 @@
     if (isUndef(Ctor)) {
       return
     }
-
+    debugger    
     // baseCtor 代表Vue构造器
     var baseCtor = context.$options._base;
 
@@ -3494,6 +3495,7 @@
           config.parsePlatformTagName(tag), data, children,
           undefined, undefined, context
         );
+      // 如何判断该节点为组件占位符节点？通过判断是否在配置里拥有了该标签的组件选项。
       } else if ((!data || !data.pre) && isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
         // component
         vnode = createComponent(Ctor, data, context, children, tag);

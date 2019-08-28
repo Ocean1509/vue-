@@ -48,40 +48,54 @@
     //   }
     // })
     // console.log(vm)
+    // var child = {
+    //   template: `<div>上<slot :user="user">{{user.lastName}}</slot>下
+    //  </div>`,
+    //   methods: {},
+    //   data() {
+    //     return {
+    //       user: {
+    //         firstName: 'li',
+    //         lastName: 'yang'
+    //       }
+    //     }
+    //   },
+    // }
+    // var vm = new Vue({
+    //   el: '#app',
+    //   components: {
+    //     child
+    //   },
+    //   data() {
+    //     return {
+    //       test: '111',
+
+    //     }
+    //   },
+    //   template: `<div id="app">
+    //    <child>
+    //     <template v-slot:default="slotProps">
+    //      {{slotProps.user.firstName}}
+    //     </template>
+    //    </child>
+    //  </div>`,
+    //   methods: {}
+    // })
+    // console.log(vm)
     var child = {
-      template: `<div>上<slot :user="user">{{user.lastName}}</slot>下
-     </div>`,
-      methods: {},
-      data() {
-        return {
-          user: {
-            firstName: 'li',
-            lastName: 'yang'
-          }
-        }
-      },
+      template: `<div class="child">
+      <slot>test</slot>
+    </div>`
     }
     var vm = new Vue({
       el: '#app',
       components: {
         child
       },
-      data() {
-        return {
-          test: '111',
-
-        }
-      },
       template: `<div id="app">
-       <child>
-        <template v-slot:default="slotProps">
-         {{slotProps.user.firstName}}
-        </template>
-       </child>
-     </div>`,
-      methods: {}
+      <child></child>
+    </div>`
     })
-    console.log(vm)
   </script>
 
 </body>
