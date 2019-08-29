@@ -96,11 +96,33 @@
     //   <child></child>
     // </div>`
     // })
+    // var child = {
+    //   template: `<div class="child">
+    //   <slot name="header"></slot>
+    //   <slot name="footer"></slot>
+    // </div>`,
+    // }
+    // var vm = new Vue({
+    //   el: '#app',
+    //   components: {
+    //     child
+    //   },
+    //   template: `<div id="app">
+    //   <child><template v-slot:header><span>头部</span></template><template v-slot:footer><span>底部</span></template>
+    //   </child>
+    // </div>`,
+    // })
     var child = {
-      template: `<div class="child">
-      <slot name="header"></slot>
-      <slot name="footer"></slot>
+      template: `<div>
+      <slot :user="user">
     </div>`,
+      data() {
+        return {
+          user: {
+            firstname: 'test'
+          }
+        }
+      }
     }
     var vm = new Vue({
       el: '#app',
@@ -108,9 +130,8 @@
         child
       },
       template: `<div id="app">
-      <child><template v-slot:header><span>头部</span></template><template v-slot:footer><span>底部</span></template>
-      </child>
-    </div>`,
+      <child><template v-slot:default="slotProps">{{slotProps.user.firstname}}</template></child>
+    </div>`
     })
   </script>
 
