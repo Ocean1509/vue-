@@ -2551,7 +2551,6 @@
     children,
     context
   ) {
-    debugger
     if (!children || !children.length) {
       return {}
     }
@@ -2638,6 +2637,7 @@
     }
     def(res, '$stable', isStable);
     def(res, '$key', key);
+    console.log(res['default'])
     return res
   }
 
@@ -2725,7 +2725,6 @@
     props, // 子传给父的值
     bindObject
   ) {
-    debugger
     // scopedSlotFn拿到父组件插槽的执行函数，默认slotname为default
     var scopedSlotFn = this.$scopedSlots[name];
     var nodes;
@@ -3244,7 +3243,6 @@
     if (isUndef(Ctor)) {
       return
     }
-    debugger    
     // baseCtor 代表Vue构造器
     var baseCtor = context.$options._base;
 
@@ -3293,6 +3291,7 @@
 
     // transform component v-model data into props & events
     if (isDef(data.model)) {
+      // 处理父组件的v-model指令对象
       transformModel(Ctor.options, data);
     }
     // extract props
@@ -3387,7 +3386,10 @@
   // transform component v-model info (value and callback) into
   // prop and event handler respectively.
   function transformModel (options, data) {
+    // prop默认取的是value，除非配置上有model的选项
     var prop = (options.model && options.model.prop) || 'value';
+    // event默认取的是input，除非配置上有model的选项
+
     var event = (options.model && options.model.event) || 'input'
     ;(data.attrs || (data.attrs = {}))[prop] = data.model.value;
     var on = data.on || (data.on = {});
@@ -3474,7 +3476,6 @@
       typeof children[0] === 'function'
     ) {
       data = data || {};
-      debugger
       data.scopedSlots = { default: children[0] };
       children.length = 0;
     }
@@ -3561,7 +3562,6 @@
     var options = vm.$options;
     var parentVnode = vm.$vnode = options._parentVnode; // the placeholder node in parent tree
     var renderContext = parentVnode && parentVnode.context;
-    debugger
     vm.$slots = resolveSlots(options._renderChildren, renderContext);// $slots拿到了子占位符节点的_renderchildren即插槽内容，保留作为子实例的属性
     vm.$scopedSlots = emptyObject;
     // bind the createElement fn to this instance
@@ -3603,9 +3603,7 @@
       var ref = vm.$options;
       var render = ref.render;
       var _parentVnode = ref._parentVnode;
-      debugger
       if (_parentVnode) {
-        debugger
         vm.$scopedSlots = normalizeScopedSlots(
           _parentVnode.data.scopedSlots,
           vm.$slots,
@@ -4728,7 +4726,6 @@
     if (!isRoot) {
       toggleObserving(false);
     }
-    debugger
     var loop = function ( key ) {
       keys.push(key);
       var value = validateProp(key, propsOptions, propsData, vm);
@@ -5060,7 +5057,6 @@
         // optimize internal component instantiation
         // since dynamic options merging is pretty slow, and none of the
         // internal component options needs special treatment.
-        debugger
         initInternalComponent(vm, options);
       } else {
         // 选项合并，将合并后的选项赋值给实例的$options属性
@@ -6011,6 +6007,7 @@
       ownerArray,
       index
     ) {
+      debugger
       if (isDef(vnode.elm) && isDef(ownerArray)) {
         // This vnode was used in a previous render!
         // now it's used as a new node, overwriting its elm would cause
@@ -6054,7 +6051,9 @@
         /* istanbul ignore if */
         {
           createChildren(vnode, children, insertedVnodeQueue);
+          // 处理data属性相关逻辑
           if (isDef(data)) {
+            debugger
             invokeCreateHooks(vnode, insertedVnodeQueue);
           }
           insert(parentElm, vnode.elm, refElm);
@@ -6375,7 +6374,6 @@
       if (oldVnode === vnode) {
         return
       }
-
       if (isDef(vnode.elm) && isDef(ownerArray)) {
         // clone reused vnode
         vnode = ownerArray[index] = cloneVNode(vnode);
@@ -7284,7 +7282,7 @@
       valueExpression = "_n(" + valueExpression + ")";
     }
     var assignment = genAssignmentCode(value, valueExpression);
-
+    // 在ast树上添加model属性，其中有value，expression，callback属性
     el.model = {
       value: ("(" + value + ")"),
       expression: JSON.stringify(value),
@@ -7299,10 +7297,13 @@
     value,
     assignment
   ) {
+    // 处理v-model的格式，v-model="a.b" v-model="a[b]"
     var res = parseModel(value);
     if (res.key === null) {
+      // 普通情形
       return (value + "=" + assignment)
     } else {
+      // 对象形式
       return ("$set(" + (res.exp) + ", " + (res.key) + ", " + assignment + ")")
     }
   }
@@ -7331,7 +7332,7 @@
     // allow v-model="obj.val " (trailing whitespace)
     val = val.trim();
     len = val.length;
-
+    // v-model="obj" v-model="obj.a"
     if (val.indexOf('[') < 0 || val.lastIndexOf(']') < len - 1) {
       index$1 = val.lastIndexOf('.');
       if (index$1 > -1) {
@@ -7346,7 +7347,7 @@
         }
       }
     }
-
+    //  v-model="obj[a]"
     str = val;
     index$1 = expressionPos = expressionEndPos = 0;
 
@@ -7421,6 +7422,7 @@
     _warn
   ) {
     warn$1 = _warn;
+    // 绑定的值
     var value = dir.value;
     var modifiers = dir.modifiers;
     var tag = el.tag;
@@ -7429,6 +7431,7 @@
     {
       // inputs with type="file" are read only and setting the input's
       // value will throw an error.
+      // type === file的input输入框，不允许使用v-model进行双向绑定，因为File inputs是只读的
       if (tag === 'input' && type === 'file') {
         warn$1(
           "<" + (el.tag) + " v-model=\"" + value + "\" type=\"file\">:\n" +
@@ -7437,18 +7440,22 @@
         );
       }
     }
-
+    //组件上v-model的处理
     if (el.component) {
       genComponentModel(el, value, modifiers);
       // component v-model doesn't need extra runtime
       return false
     } else if (tag === 'select') {
+      // select表单
       genSelect(el, value, modifiers);
     } else if (tag === 'input' && type === 'checkbox') {
+      // checkbox表单
       genCheckboxModel(el, value, modifiers);
     } else if (tag === 'input' && type === 'radio') {
+      // radio表单
       genRadioModel(el, value, modifiers);
     } else if (tag === 'input' || tag === 'textarea') {
+      // 普通input，如 text, textarea
       genDefaultModel(el, value, modifiers);
     } else if (!config.isReservedTag(tag)) {
       genComponentModel(el, value, modifiers);
@@ -7465,6 +7472,7 @@
     }
 
     // ensure runtime directive metadata
+    // 
     return true
   }
 
@@ -7537,6 +7545,7 @@
 
     // warn if v-bind:value conflicts with v-model
     // except for inputs with v-bind:type
+    // v-model和v-bind值相同值，有冲突会报错
     {
       var value$1 = el.attrsMap['v-bind:value'] || el.attrsMap[':value'];
       var typeBinding = el.attrsMap['v-bind:type'] || el.attrsMap[':type'];
@@ -7555,6 +7564,7 @@
     var number = ref.number;
     var trim = ref.trim;
     var needCompositionGuard = !lazy && type !== 'range';
+    // lazy修饰符将触发同步的事件从input改为change
     var event = lazy
       ? 'change'
       : type === 'range'
@@ -7562,19 +7572,23 @@
         : 'input';
 
     var valueExpression = '$event.target.value';
+    // 过滤用户输入的首尾空白符
     if (trim) {
       valueExpression = "$event.target.value.trim()";
     }
+    // 将用户输入转为数值类型
     if (number) {
       valueExpression = "_n(" + valueExpression + ")";
     }
 
     var code = genAssignmentCode(value, valueExpression);
     if (needCompositionGuard) {
+      //  保证了不会在输入法组合文字过程中得到更新
       code = "if($event.target.composing)return;" + code;
     }
-
+    //  添加value属性
     addProp(el, 'value', ("(" + value + ")"));
+    // 绑定事件
     addHandler(el, event, code, null, true);
     if (trim || number) {
       addHandler(el, 'blur', '$forceUpdate()');
@@ -7701,6 +7715,7 @@
   var svgContainer;
 
   function updateDOMProps (oldVnode, vnode) {
+    debugger
     if (isUndef(oldVnode.data.domProps) && isUndef(vnode.data.domProps)) {
       return
     }
@@ -7723,6 +7738,7 @@
       // ignore children if the node has textContent or innerHTML,
       // as these will throw away existing DOM nodes and cause removal errors
       // on subsequent patches (#3360)
+      //  textContent针对v-text指令， innerHTML针对v-html指令,如果模板节点有子节点，会自动忽略，删除vnode的children，以及真实的子节点
       if (key === 'textContent' || key === 'innerHTML') {
         if (vnode.children) { vnode.children.length = 0; }
         if (cur === oldProps[key]) { continue }
@@ -7732,7 +7748,7 @@
           elm.removeChild(elm.childNodes[0]);
         }
       }
-
+      //    value针对v-model指令的value
       if (key === 'value' && elm.tagName !== 'PROGRESS') {
         // store value as _value as well since
         // non-string values will be stringified
@@ -8684,7 +8700,7 @@
   }
 
   function onCompositionEnd (e) {
-    // prevent triggering an input event for no reason
+                // prevent triggering an input event for no reason
     if (!e.target.composing) { return }
     e.target.composing = false;
     trigger(e.target, 'input');
@@ -10261,7 +10277,6 @@
     {
       // 针对插槽<template v-slot:header></template>
       if (el.tag === 'template') {
-        debugger
         // v-slot on <template>
         var slotBinding = getAndRemoveAttrByRegex(el, slotRE);
         if (slotBinding) {
@@ -10467,6 +10482,7 @@
           }
           addHandler(el, name, value, modifiers, false, warn$2, list[i], isDynamic);
         } else { // normal directives
+          // 除了v-bind，v-on之外的普通指令
           name = name.replace(dirRE, '');
           // parse arg
           var argMatch = name.match(argRE);
@@ -10479,6 +10495,7 @@
               isDynamic = true;
             }
           }
+          // 普通指令会在AST树上添加directives属性
           addDirective(el, name, rawName, value, arg, isDynamic, modifiers, list[i]);
           if (name === 'model') {
             checkForAliasModel(el, value);
@@ -11028,9 +11045,6 @@
   /*  */
 
 
-
-
-
   var CodegenState = function CodegenState (options) {
     this.options = options;
     this.warn = options.warn || baseWarn;
@@ -11215,6 +11229,7 @@
     // directives first.
     // directives may mutate the el's other properties before they are generated.
     var dirs = genDirectives(el, state);
+    // "directives:[{name:"model",rawName:"v-model",value:(value1),expression:"value1"}]"
     if (dirs) { data += dirs + ','; }
 
     // key
@@ -11265,6 +11280,7 @@
       data += (genScopedSlots(el, el.scopedSlots, state)) + ",";
     }
     // component v-model
+    // v-model组件的render函数处理
     if (el.model) {
       data += "model:{value:" + (el.model.value) + ",callback:" + (el.model.callback) + ",expression:" + (el.model.expression) + "},";
     }
@@ -11292,8 +11308,9 @@
     }
     return data
   }
-
+  // directives render字符串的生成
   function genDirectives (el, state) {
+    // 拿到指令对象
     var dirs = el.directives;
     if (!dirs) { return }
     var res = 'directives:[';
@@ -11511,7 +11528,6 @@
   }
 
   function genSlot (el, state) {
-    debugger
     var slotName = el.slotName || '"default"';
     // 如果子组件的插槽还有子元素，则会递归调执行子元素的创建过程
     var children = genChildren(el, state);
@@ -11938,7 +11954,6 @@
       optimize(ast, options);
     }
     var code = generate(ast, options);
-    debugger
     return {
       ast: ast,
       render: code.render,
