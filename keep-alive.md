@@ -183,3 +183,8 @@ vnode 过程
 }
 ```
 
+
+
+```createComponentInstanceForVnode```
+
+

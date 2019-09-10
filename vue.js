@@ -6073,6 +6073,7 @@
     }
 
     function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
+      debugger
       var i = vnode.data;
       if (isDef(i)) {
         var isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
