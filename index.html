@@ -9,132 +9,60 @@
 </head>
 
 <body>
-  <!-- <div id="app">
-    <test3 :msg="msg" d="21">
-      <p>second</p>
-    </test3>
-  </div> -->
-  <!-- <div id="app">
-    <test :num-d="num"></test>
-  </div> -->
+
   <div id="app">
+    <!-- <button @click="changeTabs('child1')">child1</button>
+    <button @click="changeTabs('child2')">child2</button>
+    <button @click="changeTabs('child3')">child3</button> -->
+    <component :is="chooseTabs" inline-template>
+      <span>{{test}}</span>
+    </component>
+    <!-- <child1>{{test}}</child1> -->
   </div>
   <script src="./vue.js"></script>
   <script>
-    // var child = {
-    //   template: `<div>上<slot name="header">墩墩墩</slot><slot name="footer"></slot>下</div>`,
-    //   methods: {
-    //   },
-    //   props: ['urls']
-    // }
-    // var vm = new Vue({
-    //   el: '#app',
-    //   components: {
-    //     child
-    //   },
-    //   data () {
-    //     return {
-    //       test: '111'
-    //     }
-    //   },
-    //   template: `<div id="app">
-    //     <child><template v-slot:header>
-    //       头部
-    //     </template><template v-slot:footer>
-    //       底部
-    //     </template></child>
-    //   </div>`,
-    //   methods: {
-    //   }
-    // })
-    // console.log(vm)
-    // var child = {
-    //   template: `<div>上<slot :user="user">{{user.lastName}}</slot>下
-    //  </div>`,
-    //   methods: {},
-    //   data() {
-    //     return {
-    //       user: {
-    //         firstName: 'li',
-    //         lastName: 'yang'
-    //       }
-    //     }
-    //   },
-    // }
-    // var vm = new Vue({
-    //   el: '#app',
-    //   components: {
-    //     child
-    //   },
-    //   data() {
-    //     return {
-    //       test: '111',
-
-    //     }
-    //   },
-    //   template: `<div id="app">
-    //    <child>
-    //     <template v-slot:default="slotProps">
-    //      {{slotProps.user.firstName}}
-    //     </template>
-    //    </child>
-    //  </div>`,
-    //   methods: {}
-    // })
-    // console.log(vm)
-    // var child = {
-    //   template: `<div class="child">
-    //   <slot>test</slot>
-    // </div>`
-    // }
-    // var vm = new Vue({
-    //   el: '#app',
-    //   components: {
-    //     child
-    //   },
-    //   template: `<div id="app">
-    //   <child></child>
-    // </div>`
-    // })
-    // var child = {
-    //   template: `<div class="child">
-    //   <slot name="header"></slot>
-    //   <slot name="footer"></slot>
-    // </div>`,
-    // }
-    // var vm = new Vue({
-    //   el: '#app',
-    //   components: {
-    //     child
-    //   },
-    //   template: `<div id="app">
-    //   <child><template v-slot:header><span>头部</span></template><template v-slot:footer><span>底部</span></template>
-    //   </child>
-    // </div>`,
-    // })
-    var child = {
-      template: `<div>
-      <slot :user="user">
-    </div>`,
+    var child1 = {
       data() {
         return {
-          user: {
-            firstname: 'test'
-          }
+          test: 'content1'
+        }
+      }
+    }
+    var child2 = {
+      data() {
+        return {
+          test: 'content2'
+        }
+      }
+    }
+    var child3 = {
+      data() {
+        return {
+          test: 'content3'
         }
       }
     }
     var vm = new Vue({
       el: '#app',
       components: {
-        child
+        child1,
+        child2,
+        child3
       },
-      template: `<div id="app">
-      <child><template v-slot:default="slotProps">{{slotProps.user.firstname}}</template></child>
-    </div>`
+      data() {
+        return {
+          chooseTabs: 'child1',
+          test: 234
+        }
+      },
+      methods: {
+        changeTabs(tab) {
+          this.chooseTabs = tab;
+        }
+      }
     })
+    console.log(vm)
+    console.log(Vue)
   </script>
-
-</body>
 
 </html>

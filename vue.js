@@ -2637,7 +2637,6 @@
     }
     def(res, '$stable', isStable);
     def(res, '$key', key);
-    console.log(res['default'])
     return res
   }
 
@@ -3240,6 +3239,7 @@
     children, // 子节点
     tag // 子组件占位符
   ) {
+    debugger
     if (isUndef(Ctor)) {
       return
     }
@@ -3443,6 +3443,8 @@
     children,
     normalizationType
   ) {
+    debugger
+
     // 数据对象不能是定义在Vue data属性中的响应式数据。
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
@@ -3452,7 +3454,6 @@
       );
       return createEmptyVNode() // 返回注释节点
     }
-    // 针对动态组件 :is 的特殊处理
     if (isDef(data) && isDef(data.is)) {
       tag = data.is;
     }
@@ -4132,6 +4133,7 @@
     } else {
       updateComponent = function () {
         // vm._render会生成vnode
+        debugger
         vm._update(vm._render(), hydrating);
       };
     }
@@ -5105,7 +5107,6 @@
     var parentVnode = options._parentVnode;
     opts.parent = options.parent;
     opts._parentVnode = parentVnode;
-
     var vnodeComponentOptions = parentVnode.componentOptions;
     opts.propsData = vnodeComponentOptions.propsData;
     opts._parentListeners = vnodeComponentOptions.listeners;
@@ -5230,6 +5231,7 @@
       }
 
       var Sub = function VueComponent (options) { // 子类构造器
+        debugger
         this._init(options);
       };
       Sub.prototype = Object.create(Super.prototype); // 子类继承于父类
@@ -6053,7 +6055,6 @@
           createChildren(vnode, children, insertedVnodeQueue);
           // 处理data属性相关逻辑
           if (isDef(data)) {
-            debugger
             invokeCreateHooks(vnode, insertedVnodeQueue);
           }
           insert(parentElm, vnode.elm, refElm);
@@ -7715,7 +7716,6 @@
   var svgContainer;
 
   function updateDOMProps (oldVnode, vnode) {
-    debugger
     if (isUndef(oldVnode.data.domProps) && isUndef(vnode.data.domProps)) {
       return
     }
@@ -10385,9 +10385,12 @@
     }
   }
 
+  //  针对动态组件的解析
   function processComponent (el) {
     var binding;
+    // 拿到is属性所对应的值
     if ((binding = getBindingAttr(el, 'is'))) {
+      // ast树上多了component的属性
       el.component = binding;
     }
     if (getAndRemoveAttr(el, 'inline-template') != null) {
@@ -11248,6 +11251,7 @@
       data += "pre:true,";
     }
     // record original tag name for components using "is" attribute
+    // 针对动态组件的处理， 以{ tag: XXX }的形式存在
     if (el.component) {
       data += "tag:\"" + (el.tag) + "\",";
     }
@@ -11555,11 +11559,13 @@
   }
 
   // componentName is el.component, take it as argument to shun flow's pessimistic refinement
+  // 针对动态组件的处理
   function genComponent (
     componentName,
     el,
     state
   ) {
+    // 拥有inlineTemplate属性时，children为null
     var children = el.inlineTemplate ? null : genChildren(el, state, true);
     return ("_c(" + componentName + "," + (genData$2(el, state)) + (children ? ("," + children) : '') + ")")
   }
@@ -11949,6 +11955,7 @@
     template,
     options
   ) {
+    debugger
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
