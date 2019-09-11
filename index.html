@@ -14,14 +14,19 @@
     <!-- <button @click="changeTabs('child1')">child1</button>
     <button @click="changeTabs('child2')">child2</button>
     <button @click="changeTabs('child3')">child3</button> -->
-    <component :is="chooseTabs" inline-template>
-      <span>{{test}}</span>
-    </component>
+    <!-- <keep-alive> -->
+      <component :is="chooseTabs">
+        <!-- <span>{{test}}</span> -->
+      </component>
+    <!-- </keep-alive> -->
+      <child1></child1>
+
     <!-- <child1>{{test}}</child1> -->
   </div>
   <script src="./vue.js"></script>
   <script>
     var child1 = {
+      template: '<div><slot></slot></div>',
       data() {
         return {
           test: 'content1'

@@ -360,6 +360,7 @@
 
   var SSR_ATTR = 'data-server-rendered';
 
+  // 资源选项
   var ASSET_TYPES = [
     'component',
     'directive',
@@ -1353,6 +1354,7 @@
     }
   }
 
+  // 定义资源合并的策略
   ASSET_TYPES.forEach(function (type) {
     strats[type + 's'] = mergeAssets; // 定义默认策略
   });
@@ -5513,7 +5515,6 @@
     // components with in Weex's multi-instance scenarios.
     // options里的_base属性存储Vue构造器
     Vue.options._base = Vue;
-
     extend(Vue.options.components, builtInComponents);
 
     initUse(Vue);
@@ -9153,7 +9154,6 @@
   Vue.config.isReservedAttr = isReservedAttr;
   Vue.config.getTagNamespace = getTagNamespace;
   Vue.config.isUnknownElement = isUnknownElement;
-
   // install platform runtime directives & components
   extend(Vue.options.directives, platformDirectives);
   extend(Vue.options.components, platformComponents);
@@ -10071,6 +10071,7 @@
     element,
     options
   ) {
+    debugger
     processKey(element);
 
     // determine whether this is a plain element after
@@ -11961,6 +11962,7 @@
     if (options.optimize !== false) {
       optimize(ast, options);
     }
+    debugger
     var code = generate(ast, options);
     return {
       ast: ast,
