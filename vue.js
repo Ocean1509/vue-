@@ -3178,6 +3178,7 @@
         var mountedNode = vnode; // work around flow
         componentVNodeHooks.prepatch(mountedNode, mountedNode);
       } else {
+        debugger
         var child = vnode.componentInstance = createComponentInstanceForVnode(
           vnode,
           activeInstance
@@ -3355,6 +3356,7 @@
     };
     // check inline-template render functions
     var inlineTemplate = vnode.data.inlineTemplate;
+    // 内联模板的处理，分别拿到render函数和staticRenderFns
     if (isDef(inlineTemplate)) {
       options.render = inlineTemplate.render;
       options.staticRenderFns = inlineTemplate.staticRenderFns;

@@ -15,8 +15,8 @@
     <button @click="changeTabs('child2')">child2</button>
     <button @click="changeTabs('child3')">child3</button> -->
     <!-- <keep-alive> -->
-      <component :is="chooseTabs">
-        <!-- <span>{{test}}</span> -->
+      <component :is="chooseTabs" inline-template>
+        <span>{{test}}</span>
       </component>
     <!-- </keep-alive> -->
       <child1></child1>
