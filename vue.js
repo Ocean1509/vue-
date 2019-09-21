@@ -3178,7 +3178,6 @@
         var mountedNode = vnode; // work around flow
         componentVNodeHooks.prepatch(mountedNode, mountedNode);
       } else {
-        debugger
         var child = vnode.componentInstance = createComponentInstanceForVnode(
           vnode,
           activeInstance
@@ -3234,7 +3233,7 @@
 
   var hooksToMerge = Object.keys(componentVNodeHooks);
 
-  // 创建子组件过程
+  // 创建子组件Vnode过程
   function createComponent (
     Ctor, // 子类构造器
     data,
@@ -3242,7 +3241,6 @@
     children, // 子节点
     tag // 子组件占位符
   ) {
-    debugger
     if (isUndef(Ctor)) {
       return
     }
@@ -3447,7 +3445,6 @@
     children,
     normalizationType
   ) {
-    debugger
 
     // 数据对象不能是定义在Vue data属性中的响应式数据。
     if (isDef(data) && isDef((data).__ob__)) {
@@ -4006,6 +4003,7 @@
 
   function lifecycleMixin (Vue) {
     Vue.prototype._update = function (vnode, hydrating) {
+      debugger
       var vm = this;
       var prevEl = vm.$el;
       var prevVnode = vm._vnode;
@@ -4137,7 +4135,6 @@
     } else {
       updateComponent = function () {
         // vm._render会生成vnode
-        debugger
         vm._update(vm._render(), hydrating);
       };
     }
@@ -5235,7 +5232,6 @@
       }
 
       var Sub = function VueComponent (options) { // 子类构造器
-        debugger
         this._init(options);
       };
       Sub.prototype = Object.create(Super.prototype); // 子类继承于父类
@@ -5390,6 +5386,7 @@
 
   var patternTypes = [String, RegExp, Array];
 
+  // keepalive组件选项
   var KeepAlive = {
     name: 'keep-alive',
     abstract: true,
@@ -5401,7 +5398,9 @@
     },
 
     created: function created () {
+      // 缓存组件vnode
       this.cache = Object.create(null);
+      // 组件名
       this.keys = [];
     },
 
@@ -5413,7 +5412,7 @@
 
     mounted: function mounted () {
       var this$1 = this;
-
+      // 动态include和exclude
       this.$watch('include', function (val) {
         pruneCache(this$1, function (name) { return matches(val, name); });
       });
@@ -5423,15 +5422,22 @@
     },
 
     render: function render () {
+      debugger
+      // 拿到keep-alive下插槽的值
       var slot = this.$slots.default;
+      // 第一个vnode节点
       var vnode = getFirstComponentChild(slot);
+      // 拿到第一个组件实例
       var componentOptions = vnode && vnode.componentOptions;
+      // keep-alive的第一个子组件实例存在
       if (componentOptions) {
         // check pattern
+        //拿到第一个vnode节点的name
         var name = getComponentName(componentOptions);
         var ref = this;
         var include = ref.include;
         var exclude = ref.exclude;
+        // 通过判断子组件是否满足缓存匹配
         if (
           // not included
           (include && (!name || !matches(include, name))) ||
@@ -6012,7 +6018,6 @@
       ownerArray,
       index
     ) {
-      debugger
       if (isDef(vnode.elm) && isDef(ownerArray)) {
         // This vnode was used in a previous render!
         // now it's used as a new node, overwriting its elm would cause
@@ -6076,7 +6081,9 @@
     }
 
     function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
-      debugger
+      if(vnode.tag === "vue-component-2-keep-alive") {
+        debugger
+      }
       var i = vnode.data;
       if (isDef(i)) {
         var isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
@@ -6087,7 +6094,11 @@
         // it should've created a child instance and mounted it. the child
         // component also has set the placeholder vnode's elm.
         // in that case we can just return the element and be done.
+        if(vnode.tag === "vue-component-2-keep-alive") {
+          debugger
+        }
         if (isDef(vnode.componentInstance)) {
+          // 其中一个作用是保留真实dom到vnode中
           initComponent(vnode, insertedVnodeQueue);
           insert(parentElm, vnode.elm, refElm);
           if (isTrue(isReactivated)) {
@@ -6103,6 +6114,7 @@
         insertedVnodeQueue.push.apply(insertedVnodeQueue, vnode.data.pendingInsert);
         vnode.data.pendingInsert = null;
       }
+      // vnode保留真实节点
       vnode.elm = vnode.componentInstance.$el;
       if (isPatchable(vnode)) {
         invokeCreateHooks(vnode, insertedVnodeQueue);
@@ -6376,6 +6388,7 @@
       index,
       removeOnly
     ) {
+      debugger
       if (oldVnode === vnode) {
         return
       }
@@ -6571,7 +6584,6 @@
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return
       }
-
       var isInitialPatch = false;
       var insertedVnodeQueue = [];
 
@@ -10073,7 +10085,6 @@
     element,
     options
   ) {
-    debugger
     processKey(element);
 
     // determine whether this is a plain element after
@@ -11959,12 +11970,10 @@
     template,
     options
   ) {
-    debugger
     var ast = parse(template.trim(), options);
     if (options.optimize !== false) {
       optimize(ast, options);
     }
-    debugger
     var code = generate(ast, options);
     return {
       ast: ast,

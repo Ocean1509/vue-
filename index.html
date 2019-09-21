@@ -11,53 +11,51 @@
 <body>
 
   <div id="app">
-    <!-- <button @click="changeTabs('child1')">child1</button>
+    <button @click="changeTabs('child1')">child1</button>
     <button @click="changeTabs('child2')">child2</button>
-    <button @click="changeTabs('child3')">child3</button> -->
-    <!-- <keep-alive> -->
-      <component :is="chooseTabs" inline-template>
-        <span>{{test}}</span>
+    <keep-alive>
+      <component :is="chooseTabs">
       </component>
-    <!-- </keep-alive> -->
-      <child1></child1>
-
+    </keep-alive>
     <!-- <child1>{{test}}</child1> -->
   </div>
   <script src="./vue.js"></script>
   <script>
     var child1 = {
-      template: '<div><slot></slot></div>',
+      template: '<div><button @click="add">add</button><p>{{num}}</p></div>',
       data() {
         return {
-          test: 'content1'
+          num: 1
         }
-      }
+      },
+      methods: {
+        add() {
+          this.num++
+        }
+      },
     }
     var child2 = {
-      data() {
-        return {
-          test: 'content2'
-        }
+      template: '<div>child2</div>',
+      mounted() {
+        console.log('child2 mounted')
+      },
+      activated() {
+        console.log('child2 activated')
+      },
+      deactivated() {
+        console.log('child2 deactivated')
       }
     }
-    var child3 = {
-      data() {
-        return {
-          test: 'content3'
-        }
-      }
-    }
+    
     var vm = new Vue({
       el: '#app',
       components: {
         child1,
         child2,
-        child3
       },
       data() {
         return {
           chooseTabs: 'child1',
-          test: 234
         }
       },
       methods: {
@@ -66,8 +64,6 @@
         }
       }
     })
-    console.log(vm)
-    console.log(Vue)
   </script>
 
 </html>
