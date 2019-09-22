@@ -6423,6 +6423,7 @@
 
       var i;
       var data = vnode.data;
+      // 新vnode
       if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
         i(oldVnode, vnode);
       }
