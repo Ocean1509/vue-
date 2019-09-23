@@ -1,7 +1,7 @@
-> 上一节说过，我们会利用接下来的两节内容详细介绍```Vue```提供给我们使用的内置组件，```keep-alive```是内置组件中最常用的部分，我们在不同组件间切换时，经常要求保持组件的状态，以避免重复渲染造成的性能损耗，而```keep-alive```经常和上一节介绍的动态组件结合起来使用，这节我们将深入剖析```keep-alive```的内部实现细节。
+> 上一节最后稍微提到了```Vue```内置组件的相关内容，从这一节开始，将会被某个具体的内置组件进行分析。首先是```keep-alive```，它是我们日常开发中经常使用的组件，我们在不同组件间切换时，经常要求保持组件的状态，以避免重复渲染组件造成的性能损耗，而```keep-alive```经常和上一节介绍的动态组件结合起来使用。由于内容过多，```keep-alive```的源码分析将分为上下两部分，这一节主要围绕```keep-alive```的首次渲染展开。
 
 ### 13.1 基本用法
-只需要在动态组件的最外层添加```keep-alive```标签即可。
+```keep-alive```的使用只需要在动态组件的最外层添加标签即可。
 ```
 <div id="app">
     <button @click="changeTabs('child1')">child1</button>
@@ -45,20 +45,20 @@ var vm = new Vue({
     }
 })
 ```
-简单的结果如下，我们在```child1```组件改变组件内部状态后切换到```child2```，再次切回```child1```时，```child1```保留着原来的状态。
+简单的结果如下，动态组件在```child1,child2```之间来回切换，当第二次切到```child1```时，````child1```保留着原来的状态。
 > gif
 
-### 13.2 编译到vnode
-按照以往分析的经验，我们会从模板的解析开始说起，第一个疑问便是：内置组件和普通组件在编译过程有区别吗，答案是没有的，不管是内置的还是用户定义的组件，本质上组件在模板编译成```render```函数的处理方式是一致的，这里的细节不展开分析，有疑惑的可以参考前几节的原理分析。最终针对```keep-alive```的```render```函数的结果如下：
+### 13.2 从模板编译到生成vnode
+按照以往分析的经验，我们会从模板的解析开始说起，第一个疑问便是：内置组件和普通组件在编译过程有区别吗？答案是没有的，不管是内置的还是用户定义组件，本质上组件在模板编译成```render```函数的处理方式是一致的，这里的细节不展开分析，有疑惑的可以参考前几节的原理分析。最终针对```keep-alive```的```render```函数的结果如下：
 
 ```with(this){···_c('keep-alive',{attrs:{"include":"child2"}},[_c(chooseTabs,{tag:"component"})],1)}```
 
 
-有了```render```函数，接下来执行从子开始到根生成```Vnode```对象的过程，```_c('keep-alive'···```的处理，会执行```createElement```生成组件```Vnode```,其中由于```keep-alive```是组件，所以会调用```createComponent```函数去创建子组件```Vnode```,```createComponent```之前也有分析过，这个环节和创建普通组件```Vnode```不同之处在于，```keep-alive```的```Vnode```会剔除多余的属性内容，**由于```keep-alive```除了```slot```属性之外，其他在组件内部并没有意义，例如```class```样式，```<keep-alive clas="test"></keep-alive>```等，所以在```Vnode```层剔除掉多余的属性是有意义的。而```<keep-alive slot="test">```的写法在2.6以上的版本也已经被废弃。**(其中```abstract```作为抽象组件的标志，以及其他的作用我们后面会讲到)
+有了```render```函数，接下来从子开始到父会执行生成```Vnode```对象的过程，```_c('keep-alive'···)```的处理，会执行```createElement```生成组件```Vnode```,其中由于```keep-alive```是组件，所以会调用```createComponent```函数去创建子组件```Vnode```,```createComponent```之前也有分析过，这个环节和创建普通组件```Vnode```不同之处在于，```keep-alive```的```Vnode```会剔除多余的属性内容，**由于```keep-alive```除了```slot```属性之外，其他属性在组件内部并没有意义，例如```class```样式，```<keep-alive clas="test"></keep-alive>```等，所以在```Vnode```层剔除掉多余的属性是有意义的。而```<keep-alive slot="test">```的写法在2.6以上的版本也已经被废弃。**(其中```abstract```作为抽象组件的标志，以及其作用我们后面会讲到)
 ```
 // 创建子组件Vnode过程
 function createComponent(Ctordata,context,children,tag) {
-    // 抽象组件
+    // abstract是内置组件(抽象组件)的标志
     if (isTrue(Ctor.options.abstract)) {
         // 只保留slot属性，其他标签属性都被移除，在vnode对象上不再存在
         var slot = data.slot;
@@ -70,14 +70,14 @@ function createComponent(Ctordata,context,children,tag) {
 }
 ```
 ### 13.3 初次渲染
-```keep-alive```之所以特别，是因为它不会重复渲染相同的组件，只会利用初始渲染保留的缓存去更新节点。所以为了全面了解它的实现原理，我们需要从```keep-alive```的首次渲染开始说起。
+```keep-alive```之所以特别，是因为它不会重复渲染相同的组件，只会利用初次渲染保留的缓存去更新节点。所以为了全面了解它的实现原理，我们需要从```keep-alive```的首次渲染开始说起。
 
 
 ##### 13.3.1 流程图
-为了理清楚流程，我大致画了一个流程图，流程图说明了初始渲染```keep-alive```所执行的过程，接下来会照着这个过程进行源码分析。
+为了理清楚流程，我大致画了一个流程图，流程图大致覆盖了初始渲染```keep-alive```所执行的过程，接下来会照着这个过程进行源码分析。
 > 图
 
-和渲染普通组件相同的是，```Vue```会拿到前面生成的```Vnode```对象执行真实节点创建的过程，也就是熟悉的```patch```过程,```patch```执行阶段会调用```createElm```创建真实```dom```，在创建节点途中，```keep-alive```的```vnode```对象，它被认定为一个组件```Vnode```,因此会执行```createComponent```，对```keep-alive```组件进行初始化以及实例化。
+和渲染普通组件相同的是，```Vue```会拿到前面生成的```Vnode```对象执行真实节点创建的过程，也就是熟悉的```patch```过程,```patch```执行阶段会调用```createElm```创建真实```dom```，在创建节点途中，```keep-alive```的```vnode```对象会被认定是一个组件```Vnode```,因此针对组件```Vnode```又会执行```createComponent```函数，它会对```keep-alive```组件进行初始化和实例化。
 ```
 function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
       var i = vnode.data;
@@ -127,9 +127,9 @@ var componentVNodeHooks = {
     prepatch： function() {}
 }
 ```
-第一次执行，很明显组件```vnode```没有```componentInstance```属性，```vnode.data.keepAlive```也没有值，所以会**调用```createComponentInstanceForVnode```方法进行组件实例化将组件实例赋值给```vnode```的```componentInstance```属性，**最终执行组件实例的```$mount```挂载。
+第一次执行，很明显组件```vnode```没有```componentInstance```属性，```vnode.data.keepAlive```也没有值，所以会**调用```createComponentInstanceForVnode```方法进行组件实例化并将组件实例赋值给```vnode```的```componentInstance```属性，**最终执行组件实例的```$mount```方法进行实例挂载。
 
-```createComponentInstanceForVnode```就是组件实例化的过程，而组件实例化从系列的第一篇就开始说了，无非就是一系列选项合并，初始化事件，生命周期等等的过程。
+```createComponentInstanceForVnode```就是组件实例化的过程，而组件实例化从系列的第一篇就开始说了，无非就是一系列选项合并，初始化事件，生命周期等过程。
 ```
 function createComponentInstanceForVnode (vnode, parent) {
     var options = {
@@ -293,8 +293,8 @@ function matches (pattern, name) {
 ```
 如果组件不满足缓存的要求，则直接返回组件的```vnode```,不做任何处理,此时组件会进入正常的挂载环节。
 
-- 3. 缓存```vnode```,由于是第一次执行```render```函数，选项中的```cache```和```keys```数据都没有值，其中```cache```是一个空对象，我们将用它来缓存```{ name: vnode }```枚举，而```keys```我们用来缓存组件名。
-因此我们在第一次渲染```keep-alive```时，会将需要渲染的子组件```vnode```进行缓存。
+- 3. ```render```函数执行的关键一步是缓存```vnode```,由于是第一次执行```render```函数，选项中的```cache```和```keys```数据都没有值，其中```cache```是一个空对象，我们将用它来缓存```{ name: vnode }```枚举，而```keys```我们用来缓存组件名。
+**因此我们在第一次渲染```keep-alive```时，会将需要渲染的子组件```vnode```进行缓存。**
 ```
     cache[key] = vnode;
     keys.push(key);
@@ -305,7 +305,7 @@ function matches (pattern, name) {
 
 
 ##### 13.3.4 真实节点的保存
-我们再回到```createComponent```的逻辑，之前提到```createComponent```会先执行```keep-alive```组件的初始化流程，也包括了子组件的挂载。并且我们通过```componentInstance```拿到了```keep-alive```组件的实例，而接下来**重要的一步是将真实的```dom```保寸再```vnode```中**。
+我们再回到```createComponent```的逻辑，之前提到```createComponent```会先执行```keep-alive```组件的初始化流程，也包括了子组件的挂载。并且我们通过```componentInstance```拿到了```keep-alive```组件的实例，而接下来**重要的一步是将真实的```dom```保存再```vnode```中**。
 ```
 function createComponent(vnode, insertedVnodeQueue) {
     ···
@@ -331,13 +331,41 @@ function initComponent() {
     ···
 }
 ```
-**因此，我们很清晰的回到之前遗留下来的问题，为什么```keep-alive```需要一个```max```来限制缓存组件的数量。原因就是```keep-alive```缓存的组件数据除了包括```vnode```这一描述元素对象外，还保留着真实的```dom```,而我们知道真实节点对象是庞大的，因此大量保留缓存组件是耗费性能的。因此我们需要严格控制缓存的组件数量，而在缓存策略上也需要做优化，这点后面也继续提到。**
+**因此，我们很清晰的回到之前遗留下来的问题，为什么```keep-alive```需要一个```max```来限制缓存组件的数量。原因就是```keep-alive```缓存的组件数据除了包括```vnode```这一描述对象外，还保留着真实的```dom```节点,而我们知道真实节点对象是庞大的，所以大量保留缓存组件是耗费性能的。因此我们需要严格控制缓存的组件数量，而在缓存策略上也需要做优化，这点我们在下一篇文章也继续提到。**
 
 由于```isReactivated```为```false```,```reactivateComponent```函数也不会执行。至此```keep-alive```的初次渲染流程分析完毕。
-总结来说，内置的```keep-alive```组件，让子组件在第一次渲染的时候将```vnode```和真实的```elm```进行了缓存。
+
+**如果忽略步骤的分析，只对初次渲染流程做一个总结：内置的```keep-alive```组件，让子组件在第一次渲染的时候将```vnode```和真实的```elm```进行了缓存。**
+
 
 
 ### 13.4 抽象组件
+这一节的最后顺便提一下上文提到的抽象组件的概念。```Vue```提供的内置组件都有一个描述组件类型的选项，这个选项就是```{ astract: true }```,它表明了该组件是抽象组件。什么是抽象组件，为什么要有这一类型的区别呢？我觉得归根究底有两个方面的原因。
+- 1. 抽象组件没有真实的节点，它在组件渲染阶段不会去解析渲染成真实的```dom```节点，而只是作为中间的数据过渡层处理，在```keep-alive```中是对组件缓存的处理。
+- 2. 在我们介绍组件初始化的时候曾经说到父子组件会显式的建立一层关系，这层关系奠定了父子组件之间通信的基础。我们可以再次回顾一下```initLifecycle```的代码。
+
+```
+Vue.prototype._init = function() {
+    ···
+    var vm = this;
+    initLifecycle(vm)
+}
+
+function initLifecycle (vm) {
+    var options = vm.$options;
+    
+    var parent = options.parent;
+    if (parent && !options.abstract) {
+        // 如果有abstract属性，一直往上层寻找，直到不是抽象组件
+      while (parent.$options.abstract && parent.$parent) {
+        parent = parent.$parent;
+      }
+      parent.$children.push(vm);
+    }
+    ···
+  }
+```
+子组件在注册阶段会把父实例挂载到自身选项的```parent```属性上，在```initLifecycle```过程中，会反向拿到```parent```上的父组件```vnode```,并为其```$children```属性添加该子组件```vnode```,如果在反向找父组件的过程中，父组件拥有```abstract```属性，即可判定该组件为抽象组件，此时利用```parent```的链条往上寻找，直到组件不是抽象组件为止。```initLifecycle```的处理，让每个组件都能找到上层的父组件以及下层的子组件，使得组件之间形成一个紧密的关系树。
 
 
-$fourceupdate
+> 有了第一次的缓存处理，再第二次渲染组件时```keep-alive```又有哪些魔法的存在呢，并且之前留下的缓存优化又是什么？这些都会在下一小节一一解开。
