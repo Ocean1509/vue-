@@ -4037,6 +4037,7 @@
     Vue.prototype.$forceUpdate = function () {
       var vm = this;
       if (vm._watcher) {
+        debugger
         vm._watcher.update();
       }
     };
@@ -6081,9 +6082,7 @@
     }
 
     function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
-      if(vnode.tag === "vue-component-2-keep-alive") {
-        debugger
-      }
+      debugger
       var i = vnode.data;
       if (isDef(i)) {
         var isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
@@ -6388,7 +6387,6 @@
       index,
       removeOnly
     ) {
-      debugger
       if (oldVnode === vnode) {
         return
       }
@@ -6425,6 +6423,7 @@
       var data = vnode.data;
       // 新vnode
       if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
+        debugger
         i(oldVnode, vnode);
       }
 

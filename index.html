@@ -33,6 +33,18 @@
           this.num++
         }
       },
+      mounted() {
+        console.log('child1 mounted')
+      },
+      activated() {
+        console.log('child1 activated')
+      },
+      deactivated() {
+        console.log('child1 deactivated')
+      },
+      destroyed () {
+        console.log('child1 destoryed')
+      }
     }
     var child2 = {
       template: '<div>child2</div>',
@@ -44,9 +56,12 @@
       },
       deactivated() {
         console.log('child2 deactivated')
+      },
+      destroyed () {
+        console.log('child2 destoryed')
       }
     }
-    
+
     var vm = new Vue({
       el: '#app',
       components: {
