@@ -1,10 +1,11 @@
 // The Vue build version to load with the `import` command
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
-import App from './App'
+import test from './test'
 // import test from './test'
 import loading from './loading'
-
+import router from './router'
+import App from './App'
 // var promiseEvent = new Promise((resolve, reject) => {
 //   setTimeout(() => {
 //     reject('0000000')
@@ -114,8 +115,10 @@ import loading from './loading'
 
 var vm = new Vue({
   el: '#app',
-  template: '<div id="app"><test></test></div>',
+  router,
+  template: '<App/>',
   components: {
-    test: (resolve, reject) => require(['./test.vue'], resolve)
-  }
+    App
+  },
 })
+console.log(vm)
