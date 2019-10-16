@@ -5,81 +5,67 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>vue</title>
+  <title>Document</title>
 </head>
 
 <body>
-
-  <div id="app">
-    <button @click="changeTabs('child1')">child1</button>
-    <button @click="changeTabs('child2')">child2</button>
-    <keep-alive>
-      <component :is="chooseTabs">
-      </component>
-    </keep-alive>
-    <!-- <child1>{{test}}</child1> -->
-  </div>
+  <div id="app"></div>
   <script src="./vue.js"></script>
   <script>
-    var child1 = {
-      template: '<div><button @click="add">add</button><p>{{num}}</p></div>',
+    // var vm = new Vue({
+    //   el: '#app',
+    //   data: {
+    //     c: '12321'
+    //   },
+    //   components: {
+    //     'components': {}
+    //   }
+    // })
+    var Parent = Vue.extend({
       data() {
         return {
-          num: 1
+          a: '11',
+          b: '12321',
         }
       },
-      methods: {
-        add() {
-          this.num++
-        }
+      created() {
+        console.log('parent')
       },
-      mounted() {
-        console.log('child1 mounted')
-      },
-      activated() {
-        console.log('child1 activated')
-      },
-      deactivated() {
-        console.log('child1 deactivated')
-      },
-      destroyed () {
-        console.log('child1 destoryed')
-      }
-    }
-    var child2 = {
-      template: '<div>child2</div>',
-      mounted() {
-        console.log('child2 mounted')
-      },
-      activated() {
-        console.log('child2 activated')
-      },
-      deactivated() {
-        console.log('child2 deactivated')
-      },
-      destroyed () {
-        console.log('child2 destoryed')
-      }
-    }
-
-    var vm = new Vue({
-      el: '#app',
-      components: {
-        child1,
-        child2,
-      },
-      data() {
-        return {
-          chooseTabs: 'child1',
-        }
-      },
-      methods: {
-        changeTabs(tab) {
-          this.chooseTabs = tab;
+      watch: {
+        a() {
+          console.log(1111)
         }
       }
     })
-    console.log(vm)
+
+    var Child = Parent.extend({
+      data() {
+        return {
+          b: '1232'
+        }
+      },
+      created() {
+        console.log('child')
+      },
+      watch: {
+        a() {
+          console.log(333333)
+        }
+      }
+    })
+    var child = new Child({
+      watch: {
+        a() {
+          console.log(2222222222)
+        }
+      }
+    });
+    child.a = 12321
+    console.log(child)
+
+    // console.log(vm.data)
+    // console.log(Vue.config)
   </script>
+</body>
 
 </html>

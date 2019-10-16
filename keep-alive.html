@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>vue</title>
+</head>
+
+<body>
+
+  <div id="app">
+    <button @click="changeTabs('child1')">child1</button>
+    <button @click="changeTabs('child2')">child2</button>
+    <keep-alive>
+      <component :is="chooseTabs">
+      </component>
+    </keep-alive>
+    <!-- <child1>{{test}}</child1> -->
+  </div>
+  <script src="./vue.js"></script>
+  <script>
+    var child1 = {
+      template: '<div><button @click="add">add</button><p>{{num}}</p></div>',
+      data() {
+        return {
+          num: 1
+        }
+      },
+      methods: {
+        add() {
+          this.num++
+        }
+      },
+      mounted() {
+        console.log('child1 mounted')
+      },
+      activated() {
+        console.log('child1 activated')
+      },
+      deactivated() {
+        debugger
+        console.log('child1 deactivated')
+      },
+      destroyed () {
+        console.log('child1 destoryed')
+      }
+    }
+    var child2 = {
+      template: '<div>child2</div>',
+      mounted() {
+        console.log('child2 mounted')
+      },
+      activated() {
+        console.log('child2 activated')
+      },
+      deactivated() {
+        console.log('child2 deactivated')
+      },
+      destroyed () {
+        console.log('child2 destoryed')
+      }
+    }
+
+    var vm = new Vue({
+      el: '#app',
+      components: {
+        child1,
+        child2,
+      },
+      data() {
+        return {
+          chooseTabs: 'child1',
+        }
+      },
+      methods: {
+        changeTabs(tab) {
+          this.chooseTabs = tab;
+        }
+      }
+    })
+    console.log(vm)
+  </script>
+
+</html>

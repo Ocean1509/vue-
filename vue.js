@@ -10,7 +10,6 @@
 }(this, function () { 'use strict';
 
   /*  */
-
   var emptyObject = Object.freeze({});
 
   // These helpers produce better VM code in JS engines due to their
@@ -132,6 +131,7 @@
   /**
    * Check if a tag is a built-in tag.
    */
+  // 内部标签
   var isBuiltInTag = makeMap('slot,component', true);
 
   /**
@@ -391,21 +391,25 @@
      * Option merge strategies (used in core/util/options)
      */
     // $flow-disable-line
+    // 自定义合并策略的选项
     optionMergeStrategies: Object.create(null),
 
     /**
      * Whether to suppress warnings.
      */
+    // true为取消所有日志和警告
     silent: false,
 
     /**
      * Show production mode tip message on boot?
      */
+    // 生产或者开发环境提示
     productionTip: "development" !== 'production',
 
     /**
      * Whether to enable devtools
      */
+    // 是否允许devtools检查代码
     devtools: "development" !== 'production',
 
     /**
@@ -416,11 +420,13 @@
     /**
      * Error handler for watcher errors
      */
+    // 错误处理方法
     errorHandler: null,
 
     /**
      * Warn handler for watcher warns
      */
+    // 警告处理方法
     warnHandler: null,
 
     /**
@@ -431,6 +437,7 @@
     /**
      * Custom user key aliases for v-on
      */
+    // 为v-on自定义键名
     // $flow-disable-line
     keyCodes: Object.create(null),
 
@@ -1192,12 +1199,14 @@
   {
     // el选项，只有vue实例上才拥有el选项，其他子组件不应该拥有el选项
     strats.el = strats.propsData = function (parent, child, vm, key) {
+      // 必须为根实例
       if (!vm) {
         warn(
           "option \"" + key + "\" can only be used during instance " +
           'creation with the `new` keyword.'
         );
       }
+      // 利用默认配置直接取child中的el配置
       return defaultStrat(parent, child)
     };
   }
@@ -1208,6 +1217,7 @@
   function mergeData (to, from) {
     if (!from) { return to }
     var key, toVal, fromVal;
+    // Reflect.ownKeys可以拿到Symbol属性
     var keys = hasSymbol
       ? Reflect.ownKeys(from)
       : Object.keys(from);
@@ -1219,12 +1229,14 @@
       toVal = to[key];
       fromVal = from[key];
       if (!hasOwn(to, key)) {
+        // 将新增的数据加入响应式系统中
         set(to, key, fromVal);
       } else if (
         toVal !== fromVal &&
         isPlainObject(toVal) &&
         isPlainObject(fromVal)
       ) {
+        // 递归对data下的属性调用mergeData
         mergeData(toVal, fromVal);
       }
     }
@@ -1276,6 +1288,7 @@
     }
   }
 
+  // data的合并
   strats.data = function (
     parentVal,
     childVal,
@@ -1305,18 +1318,15 @@
     parentVal,
     childVal
   ) {
-    var res = childVal
-      ? parentVal
-        ? parentVal.concat(childVal)
-        : Array.isArray(childVal)
-          ? childVal
-          : [childVal]
-      : parentVal; // 1.如果子类和父类都拥有钩子选项，则将子类选项和父类选项合并, 2如果父类不存在钩子选项，子类存在时，则以数组形式返回子类钩子选项， 3.当子类不存在钩子选项时，则以父类选项返回。
+    var res = childVal ? parentVal ? parentVal.concat(childVal) : Array.isArray(childVal) ? childVal : [childVal] : parentVal; 
+    // 1.如果子类和父类都拥有钩子选项，则将子类选项和父类选项合并, 
+    // 2.如果父类不存在钩子选项，子类存在时，则以数组形式返回子类钩子选项，
+    // 3.当子类不存在钩子选项时，则以父类选项返回。
     return res
       ? dedupeHooks(res)
       : res
   }
-  // 防止多个组件实例钩子选项不受影响
+  // 防止多个组件实例钩子选项相互影响
   function dedupeHooks (hooks) {
     var res = [];
     for (var i = 0; i < hooks.length; i++) {
@@ -1419,12 +1429,13 @@
     if (childVal) { extend(ret, childVal); }
     return ret
   };
+  // provide的合并策略和data的合并策略相似
   strats.provide = mergeDataOrFn;
 
   /**
    * Default strategy.
    */
-  // 用户自定义选项策略
+  // 默认选项策略
   var defaultStrat = function (parentVal, childVal) {
     return childVal === undefined
       ? parentVal
@@ -1506,8 +1517,10 @@
     var inject = options.inject;
     if (!inject) { return }
     var normalized = options.inject = {};
+    //数组的形式
     if (Array.isArray(inject)) {
       for (var i = 0; i < inject.length; i++) {
+        // from: 属性是在可用的注入内容中搜索用的 key (字符串或 Symbol)
         normalized[inject[i]] = { from: inject[i] };
       }
     } else if (isPlainObject(inject)) {
@@ -1575,10 +1588,13 @@
     // but only if it is a raw options object that isn't
     // the result of another mergeOptions call.
     // Only merged options has the _base property.
+    // 针对extends扩展的子类构造器
     if (!child._base) {
+      // extends
       if (child.extends) {
         parent = mergeOptions(parent, child.extends, vm);
       }
+      // mixins
       if (child.mixins) {
         for (var i = 0, l = child.mixins.length; i < l; i++) {
           parent = mergeOptions(parent, child.mixins[i], vm);
@@ -1597,7 +1613,9 @@
       }
     }
     function mergeField (key) {
+      // 拿到各个选择指定的选项配置，如果没有则用默认的配置
       var strat = strats[key] || defaultStrat;
+      // 执行各自的合并策略
       options[key] = strat(parent[key], child[key], vm, key);
     }
     // console.log(options)
@@ -1911,6 +1929,7 @@
     return res
   }
 
+  // 全局报错提示
   function globalHandleError (err, vm, info) {
     if (config.errorHandler) {
       try {
@@ -2413,7 +2432,7 @@
   // 2. When the children contains constructs that always generated nested Arrays,
   // e.g. <template>, <slot>, v-for, or when the children is provided by user
   // with hand-written render functions / JSX. In such cases a full normalization
-  // is needed to cater to all possible types of children values.
+  // is needed to cater to all possible types of children values.\
   function normalizeChildren (children) {
     return isPrimitive(children)
       ? [createTextVNode(children)]
@@ -4003,7 +4022,6 @@
 
   function lifecycleMixin (Vue) {
     Vue.prototype._update = function (vnode, hydrating) {
-      debugger
       var vm = this;
       var prevEl = vm.$el;
       var prevVnode = vm._vnode;
@@ -4037,7 +4055,6 @@
     Vue.prototype.$forceUpdate = function () {
       var vm = this;
       if (vm._watcher) {
-        debugger
         vm._watcher.update();
       }
     };
@@ -4984,6 +5001,7 @@
     return vm.$watch(expOrFn, handler, options)
   }
 
+  // 定义原型对外暴露的一些方法和属性，常见的$data, $props，供实例使用
   function stateMixin (Vue) {
     // flow somehow has problems with directly declared definition object
     // when using Object.defineProperty, so we have to procedurally build up
@@ -5004,12 +5022,14 @@
         warn("$props is readonly.", this);
       };
     }
+    // 代理了_data,_props的访问
     Object.defineProperty(Vue.prototype, '$data', dataDef);
     Object.defineProperty(Vue.prototype, '$props', propsDef);
 
     Vue.prototype.$set = set;
     Vue.prototype.$delete = del;
 
+    // $watch ？ 
     Vue.prototype.$watch = function (
       expOrFn,
       cb,
@@ -5056,6 +5076,7 @@
       }
       // a flag to avoid this being observed
       vm._isVue = true;
+      debugger
       // merge options
       if (options && options._isComponent) {
         // optimize internal component instantiation
@@ -5159,6 +5180,7 @@
   }
   // Vue 构造函数
   function Vue (options) {
+    // 保证了无法直接通过Vue()去调用，只能通过new的方式创建实例
     if (!(this instanceof Vue)
     ) {
       warn('Vue is a constructor and should be called with the `new` keyword');
@@ -5166,17 +5188,22 @@
     this._init(options);
   }
 
-  // 在引进Vue时，会执行initMixin方法，这个方法只单纯在vue的原型上定义一个init的方法，而init方法只在在实例化Vue时执行
+  // 定义Vue上的init方法
   initMixin(Vue);
+  // 定义原型上的属性和方法，供实例使用
   stateMixin(Vue);
-  eventsMixin(Vue); //定义事件相关处理函数
-  lifecycleMixin(Vue); // 定义渲染相关的周期函数
-  renderMixin(Vue); // 定义渲染相关的函数
+  //定义事件相关处理函数
+  eventsMixin(Vue);
+  // 定义渲染相关的周期函数
+  lifecycleMixin(Vue);
+  // 定义渲染相关的函数
+  renderMixin(Vue); 
 
   /*  */
 
   function initUse (Vue) {
     Vue.use = function (plugin) {
+      // 如果插件已经注册，则返回注册过的插件
       var installedPlugins = (this._installedPlugins || (this._installedPlugins = []));
       if (installedPlugins.indexOf(plugin) > -1) {
         return this
@@ -5185,6 +5212,7 @@
       // additional parameters
       var args = toArray(arguments, 1);
       args.unshift(this);
+      // 1. plugin有install方法，则调用插件的install，没有install方法且本身为函数，则调用plugin函数执行
       if (typeof plugin.install === 'function') {
         plugin.install.apply(plugin, args);
       } else if (typeof plugin === 'function') {
@@ -5198,6 +5226,7 @@
   /*  */
 
   function initMixin$1 (Vue) {
+    // 选项配置合并
     Vue.mixin = function (mixin) {
       this.options = mergeOptions(this.options, mixin);
       return this
@@ -5423,7 +5452,6 @@
     },
 
     render: function render () {
-      debugger
       // 拿到keep-alive下插槽的值
       var slot = this.$slots.default;
       // 第一个vnode节点
@@ -5480,7 +5508,7 @@
     KeepAlive: KeepAlive
   };
 
-  /*  */
+  /* 初始化构造器的api */
 
   function initGlobalAPI (Vue) {
     // config
@@ -5493,11 +5521,13 @@
         );
       };
     }
+    // 通过Vue.config拿到配置信息
     Object.defineProperty(Vue, 'config', configDef);
 
     // exposed util methods.
     // NOTE: these are not considered part of the public API - avoid relying on
     // them unless you are aware of the risk.
+    // 不作为公共暴露的API使用
     Vue.util = {
       warn: warn,
       extend: extend,
@@ -5505,8 +5535,11 @@
       defineReactive: defineReactive$$1
     };
 
+    // Vue.set = Vue.prototype.$set
     Vue.set = set;
+    // Vue.delete = Vue.prototype.$delete
     Vue.delete = del;
+    // Vue.nextTick = Vue.prototype.$nextTick
     Vue.nextTick = nextTick;
 
     // 2.6 explicit observable API
@@ -5515,6 +5548,7 @@
       return obj
     };
 
+    // 构造函数的默认选项默认为components,directive,filter, _base
     Vue.options = Object.create(null);
     ASSET_TYPES.forEach(function (type) {
       Vue.options[type + 's'] = Object.create(null);
@@ -5525,16 +5559,18 @@
     // options里的_base属性存储Vue构造器
     Vue.options._base = Vue;
     extend(Vue.options.components, builtInComponents);
-
+    // Vue.use()
     initUse(Vue);
+    // Vue.mixin()
     initMixin$1(Vue);
     // 定义extend扩展子类构造器的方法
+    // Vue.extend()
     initExtend(Vue);
-    // 
+    // Vue.components, Vue.directive, Vue.filter
     initAssetRegisters(Vue);
   }
 
-  // 初始化全局的api
+  // 初始化全局的api(构造函数上的方法)
   initGlobalAPI(Vue);
 
   Object.defineProperty(Vue.prototype, '$isServer', {
@@ -5553,6 +5589,7 @@
     value: FunctionalRenderContext
   });
 
+  // Vue.version
   Vue.version = '2.6.8';
 
   /*  */
@@ -6082,7 +6119,6 @@
     }
 
     function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
-      debugger
       var i = vnode.data;
       if (isDef(i)) {
         var isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
@@ -6093,9 +6129,6 @@
         // it should've created a child instance and mounted it. the child
         // component also has set the placeholder vnode's elm.
         // in that case we can just return the element and be done.
-        if(vnode.tag === "vue-component-2-keep-alive") {
-          debugger
-        }
         if (isDef(vnode.componentInstance)) {
           // 其中一个作用是保留真实dom到vnode中
           initComponent(vnode, insertedVnodeQueue);
@@ -6423,7 +6456,6 @@
       var data = vnode.data;
       // 新vnode
       if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
-        debugger
         i(oldVnode, vnode);
       }
 
@@ -10875,6 +10907,7 @@
   var simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['[^']*?']|\["[^"]*?"]|\[\d+]|\[[A-Za-z_$][\w$]*])*$/; // 普通函数名
 
   // KeyboardEvent.keyCode aliases
+  // 这是系统默认辨别的键名，我们可以通过Vue.config.keyCode添加自定义键名
   var keyCodes = {
     esc: 27,
     tab: 9,
@@ -12094,6 +12127,7 @@
     }
   }
 
+  // Vue.compoile
   Vue.compile = compileToFunctions;
 
   return Vue;
