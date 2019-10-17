@@ -1579,7 +1579,7 @@
     if (typeof child === 'function') {
       child = child.options;
     }
-
+      // props,inject,directives的校验和规范化  
     normalizeProps(child, vm);
     normalizeInject(child, vm);
     normalizeDirectives(child);
@@ -3611,6 +3611,7 @@
 
   var currentRenderingInstance = null;
 
+  // 定义原型上跟渲染相关的方法
   function renderMixin (Vue) {
     // install runtime convenience helpers
     installRenderHelpers(Vue.prototype);
@@ -3889,6 +3890,7 @@
     target = undefined;
   }
 
+  // 定义原型上跟事件相关的方法
   function eventsMixin (Vue) {
     var hookRE = /^hook:/;
     Vue.prototype.$on = function (event, fn) {
@@ -4020,6 +4022,7 @@
     vm._isBeingDestroyed = false;
   }
 
+  // 定义跟生命周期相关的方法
   function lifecycleMixin (Vue) {
     Vue.prototype._update = function (vnode, hydrating) {
       var vm = this;
@@ -5001,7 +5004,7 @@
     return vm.$watch(expOrFn, handler, options)
   }
 
-  // 定义原型对外暴露的一些方法和属性，常见的$data, $props，供实例使用
+  // 在原型上定义对外暴露的一些跟数据相关的方法和属性，常见的$data, $props，供实例使用
   function stateMixin (Vue) {
     // flow somehow has problems with directly declared definition object
     // when using Object.defineProperty, so we have to procedurally build up
@@ -5188,7 +5191,7 @@
     this._init(options);
   }
 
-  // 定义Vue上的init方法
+  // 定义Vue原型上的init方法(内部方法)
   initMixin(Vue);
   // 定义原型上的属性和方法，供实例使用
   stateMixin(Vue);
