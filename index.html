@@ -21,50 +21,73 @@
     //     'components': {}
     //   }
     // })
-    var Parent = Vue.extend({
-      data() {
-        return {
-          a: '11',
-          b: '12321',
-        }
-      },
-      created() {
-        console.log('parent')
-      },
-      watch: {
-        a() {
-          console.log(1111)
-        }
-      }
-    })
+    // var vm = new Vue({
+    //   el: '#app',
+    //   data: {
+    //     _a: 123,
+    //     b: 123
+    //   }
+    // })
 
-    var Child = Parent.extend({
-      data() {
-        return {
-          b: '1232'
-        }
+    // console.log(vm.b);
+    // console.log(vm._a)
+
+    // var arr = [1,2,3];
+    // arr.forEach((item, index) => {
+    //   Object.defineProperty(arr, index, {
+    //     get() {
+    //       console.log('数组被getter拦截')
+    //       return item
+    //     },
+    //     set(value) {
+    //       console.log('数组被setter拦截')
+    //       return item = value
+    //     }
+    //   })
+    // })
+    // arr[1] = 4;
+    // // arr[4] = 12321
+    // console.log(arr[1])
+    // var obj = {}
+    // var nobj = new Proxy(obj, {
+    //   get(target, key, receiver) {
+    //     console.log('获取值')
+    //     return Reflect.get(target, key, receiver)
+    //   },
+    //   set(target, key, value, receiver) {
+    //     console.log('设置值')
+    //     return Reflect.set(target, key, value, receiver)
+    //   }
+    // })
+    // nobj.a = '代理'
+    // console.log(obj)
+    var arr = [1, 2, 3]
+    let obj = new Proxy(arr, {
+      get: function (target, key, receiver) {
+        // console.log("获取数组元素" + key);
+        return Reflect.get(target, key, receiver);
       },
-      created() {
-        console.log('child')
-      },
-      watch: {
-        a() {
-          console.log(333333)
-        }
+      set: function (target, key, receiver) {
+        console.log('设置数组');
+        return Reflect.set(target, key, receiver);
       }
     })
-    var child = new Child({
-      watch: {
-        a() {
-          console.log(2222222222)
-        }
-      }
-    });
+    // 1. 改变已存在索引的数据
+    obj[2] = 3
+    // result: 设置数组
+    // 2. push,unshift添加数据
+    obj.push(4)
+    // result: 设置数组 * 2
+    // // 3. 直接通过索引添加数组
+    obj[5] = 5
+    // result: 设置数组 * 2
+    // // 4. 删除数组元素
+    obj.splice(1, 1)
+    // result: 设置数组
     
-    console.log(child.$data)
-    console.log(child)
-    // console.log(vm.data)
-    // console.log(Vue.config)
+    // console.log(arr[0])
+    // console.log(arr[1])
+    // Object.defineProperty(arr, )
   </script>
 </body>
 
