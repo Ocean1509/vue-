@@ -9,7 +9,7 @@
 </head>
 
 <body>
-  <div id="app"></div>
+  <div id="app">{{_test}}</div>
   <script src="./vue.js"></script>
   <script>
     // var vm = new Vue({
@@ -61,33 +61,39 @@
     // })
     // nobj.a = '代理'
     // console.log(obj)
-    var arr = [1, 2, 3]
-    let obj = new Proxy(arr, {
-      get: function (target, key, receiver) {
-        // console.log("获取数组元素" + key);
-        return Reflect.get(target, key, receiver);
-      },
-      set: function (target, key, receiver) {
-        console.log('设置数组');
-        return Reflect.set(target, key, receiver);
-      }
-    })
-    // 1. 改变已存在索引的数据
-    obj[2] = 3
-    // result: 设置数组
-    // 2. push,unshift添加数据
-    obj.push(4)
-    // result: 设置数组 * 2
-    // // 3. 直接通过索引添加数组
-    obj[5] = 5
-    // result: 设置数组 * 2
-    // // 4. 删除数组元素
-    obj.splice(1, 1)
+    // var arr = [1, 2, 3]
+    // let obj = new Proxy(arr, {
+    //   get: function (target, key, receiver) {
+    //     // console.log("获取数组元素" + key);
+    //     return Reflect.get(target, key, receiver);
+    //   },
+    //   set: function (target, key, receiver) {
+    //     console.log('设置数组');
+    //     return Reflect.set(target, key, receiver);
+    //   }
+    // })
+    // // 1. 改变已存在索引的数据
+    // obj[2] = 3
+    // // result: 设置数组
+    // // 2. push,unshift添加数据
+    // obj.push(4)
+    // // result: 设置数组 * 2
+    // // // 3. 直接通过索引添加数组
+    // obj[5] = 5
+    // // result: 设置数组 * 2
+    // // // 4. 删除数组元素
+    // obj.splice(1, 1)
     // result: 设置数组
     
     // console.log(arr[0])
     // console.log(arr[1])
     // Object.defineProperty(arr, )
+    var vm = new Vue({
+      el: '#app',
+      data: {
+        _test: '1'
+      }
+    })
   </script>
 </body>
 
