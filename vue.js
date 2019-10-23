@@ -4136,6 +4136,7 @@
 
     var updateComponent;
     /* istanbul ignore if */
+    // 开启性能监控
     if (config.performance && mark) {
       updateComponent = function () {
         var name = vm._name;
@@ -10762,7 +10763,7 @@
   };
 
   /*  */
-
+// 编译器基础的配置
   var baseOptions = {
     expectHTML: true,
     modules: modules$1,
@@ -11820,6 +11821,7 @@
 
   function createFunction (code, errors) {
     try {
+      // code是以with封装的语句，new Function将语句封装成渲染函数
       return new Function(code)
     } catch (err) {
       errors.push({ err: err, code: code });
@@ -11828,6 +11830,7 @@
   }
 
   function createCompileToFunctionFn (compile) {
+    // 利用闭包的概念，将编译过的模板进行缓存
     var cache = Object.create(null);
 
     return function compileToFunctions (
@@ -11842,6 +11845,7 @@
       /* istanbul ignore if */
       {
         // detect possible CSP restriction
+        // 模板编译最终会调用new Function生成渲染函数，如果环境不支持new Function，会提前报错
         try {
           new Function('return 1');
         } catch (e) {
@@ -11871,6 +11875,7 @@
 
       // check compilation errors/tips
       {
+        // 编译错误判断处理
         if (compiled.errors && compiled.errors.length) {
           if (options.outputSourceRange) {
             compiled.errors.forEach(function (e) {
@@ -11923,7 +11928,7 @@
           );
         }
       }
-
+      // 最终返回一个对象{ render, staticRenderFns }
       return (cache[key] = res)
     }
   }
@@ -12054,6 +12059,7 @@
     el = el && query(el);
 
     /* istanbul ignore if */
+    // el 保证不能是html,body
     if (el === document.body || el === document.documentElement) {
       warn(
         "Do not mount Vue to <html> or <body> - mount to normal elements instead."
