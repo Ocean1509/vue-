@@ -88,12 +88,33 @@
     // console.log(arr[0])
     // console.log(arr[1])
     // Object.defineProperty(arr, )
+    // var vm = new Vue({
+    //   el: '#app',
+    //   data: {
+    //     _test: '1'
+    //   }
+    // })
+    // var number = 10;
+    // function fn() {
+    //   console.log(this)
+    //   console.log(this.number)
+    // }
+    // var obj = {
+    //   number: 2,
+    //   show: function(fn) {
+    //     this.number = 3;
+    //     fn();// 10
+    //     arguments[0]() // 3
+    //   }
+    // }
+    // obj.show(fn)
     var vm = new Vue({
       el: '#app',
-      data: {
-        _test: '1'
-      }
+      template: '<div><span>2112</span><span>3131</span></div>'
     })
+    console.log(vm.$options.render)
+    console.log(vm.$options.staticRenderFns[0])
+
   </script>
 </body>
 
