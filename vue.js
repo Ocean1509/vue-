@@ -779,6 +779,7 @@
 
   /*  */
 
+  // Vnode构造器描述真实dom
   var VNode = function VNode (
     tag,
     data,
@@ -3465,6 +3466,7 @@
     normalizationType
   ) {
 
+    debugger
     // 数据对象不能是定义在Vue data属性中的响应式数据。
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
@@ -6616,6 +6618,7 @@
     }
 
     return function patch (oldVnode, vnode, hydrating, removeOnly) {
+      debugger
       if (isUndef(vnode)) {
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return
