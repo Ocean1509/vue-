@@ -114,10 +114,14 @@
     // })
     // console.log(vm.$options.render)
     // console.log(vm.$options.staticRenderFns[0])
+    Vue.component('test', {
+      template: '<span></span>'
+    })
     var vm = new Vue({
       el: '#app',
-      template: '<div><span>virual dom</span></div>'
+      template: '<div><test1></test1></div>'
     })
+    console.log(vm)
   </script>
 </body>
 

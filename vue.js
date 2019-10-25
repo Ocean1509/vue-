@@ -3513,6 +3513,7 @@
     if (typeof tag === 'string') {
       var Ctor;
       ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag);
+      // 判断是否为普通的html标签，如果不是可能是组件，也可能是普通文本
       if (config.isReservedTag(tag)) {
         // platform built-in elements
         vnode = new VNode(
@@ -5082,7 +5083,6 @@
       }
       // a flag to avoid this being observed
       vm._isVue = true;
-      debugger
       // merge options
       if (options && options._isComponent) {
         // optimize internal component instantiation
@@ -6618,7 +6618,6 @@
     }
 
     return function patch (oldVnode, vnode, hydrating, removeOnly) {
-      debugger
       if (isUndef(vnode)) {
         if (isDef(oldVnode)) { invokeDestroyHook(oldVnode); }
         return
