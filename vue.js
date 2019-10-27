@@ -2347,6 +2347,7 @@
     // we are only extracting raw values here.
     // validation and default values are handled in the child
     // component itself.
+    // 拿到子组件的props值
     var propOptions = Ctor.options.props;
     if (isUndef(propOptions)) {
       return
@@ -3645,6 +3646,7 @@
         // separately from one another. Nested component's render fns are called
         // when parent component is patched.
         currentRenderingInstance = vm;
+        debugger
         vnode = render.call(vm._renderProxy, vm.$createElement);
       } catch (e) {
         handleError(e, vm, "render");
