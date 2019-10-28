@@ -4564,6 +4564,7 @@
    * 重新计算getter，并收集依赖
    */
   Watcher.prototype.get = function get () {
+    debugger
     pushTarget(this);
     var value;
     var vm = this.vm;
@@ -4985,6 +4986,7 @@
   }
 
   function initWatch (vm, watch) {
+    debugger
     for (var key in watch) {
       var handler = watch[key];
       if (Array.isArray(handler)) {

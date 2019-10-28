@@ -9,7 +9,7 @@
 </head>
 
 <body>
-  <div id="app">{{test}}</div>
+  <div id="app">{{num}}</div>
   <script src="./vue.js"></script>
   <script>
     // Vue.component('child', {
@@ -18,18 +18,18 @@
     // })
     var vm = new Vue({
       el: '#app',
-      computed: {
-        test() {
-          return this.num + 1
-        }
-      },
       data() {
         return {
-          num: 1
+          num: 12
+        }
+      },
+      watch: {
+        num() {
+          console.log('111')
         }
       }
     })
-    vm.num = 2
+    vm.num = 111
 </script>
 </body>
 
