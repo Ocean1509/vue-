@@ -9,23 +9,28 @@
 </head>
 
 <body>
-  <div id="app"><child :test="test"></child></div>
+  <div id="app">{{test}}</div>
   <script src="./vue.js"></script>
   <script>
-    Vue.component('child', {
-      template: '<div>child</div>',
-      props: ['test']
-    })
+    // Vue.component('child', {
+    //   template: '<div>child</div>',
+    //   props: ['test']
+    // })
     var vm = new Vue({
       el: '#app',
+      computed: {
+        test() {
+          return this.num + 1
+        }
+      },
       data() {
         return {
-          test: '11'
+          num: 1
         }
       }
     })
-    console.log(vm)
-  </script>
+    vm.num = 2
+</script>
 </body>
 
 </html>

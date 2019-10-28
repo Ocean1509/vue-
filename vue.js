@@ -1063,6 +1063,7 @@
       enumerable: true,
       configurable: true,
       get: function reactiveGetter () {
+        debugger
         var value = getter ? getter.call(obj) : val;
         if (Dep.target) {
           // 为当前watcher添加dep数据
@@ -1077,6 +1078,7 @@
         return value
       },
       set: function reactiveSetter (newVal) {
+        debugger
         var value = getter ? getter.call(obj) : val;
         /* eslint-disable no-self-compare */
         if (newVal === value || (newVal !== newVal && value !== value)) {
@@ -3467,7 +3469,6 @@
     normalizationType
   ) {
 
-    debugger
     // 数据对象不能是定义在Vue data属性中的响应式数据。
     if (isDef(data) && isDef((data).__ob__)) {
       warn(
@@ -3647,7 +3648,6 @@
         // separately from one another. Nested component's render fns are called
         // when parent component is patched.
         currentRenderingInstance = vm;
-        debugger
         vnode = render.call(vm._renderProxy, vm.$createElement);
       } catch (e) {
         handleError(e, vm, "render");
@@ -4162,6 +4162,7 @@
     } else {
       updateComponent = function () {
         // vm._render会生成vnode
+        debugger
         vm._update(vm._render(), hydrating);
       };
     }
@@ -4673,6 +4674,7 @@
    * Evaluate the value of the watcher.
    * This only gets called for lazy watchers.
    */
+  // 计算属性
   Watcher.prototype.evaluate = function evaluate () {
     // 对于计算属性而言 evaluate的作用是执行计算回调
     this.value = this.get();
@@ -4944,6 +4946,7 @@
   }
 
   function createGetterInvoker(fn) {
+    // 不采用缓存时，会直接进行运算
     return function computedGetter () {
       return fn.call(this, this)
     }
